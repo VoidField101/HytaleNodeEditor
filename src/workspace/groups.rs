@@ -1,6 +1,6 @@
 use std::{fs, io, path::Path};
 
-use crate::nodes::{color::ColorValue, schema::NodeDescription};
+use crate::workspace::{color::ColorValue, nodes::NodeDescription};
 
 #[derive(Debug, Clone, Default)]
 pub struct NodeGroup {

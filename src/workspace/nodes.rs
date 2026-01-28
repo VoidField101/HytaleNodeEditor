@@ -1,6 +1,6 @@
 use serde::{self, Deserialize, Serialize};
 
-use crate::nodes::color::ColorValue;
+use crate::workspace::color::ColorValue;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]

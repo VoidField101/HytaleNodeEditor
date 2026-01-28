@@ -3,16 +3,27 @@ use std::env;
 use egui::{Color32, Shape, Stroke};
 
 mod editor;
-mod nodes;
+mod workspace;
 
 use crate::{
     editor::node::{Connection, Connector, Node},
-    nodes::{groups::NodeGroup, load_groups},
+    workspace::{groups::NodeGroup, load_groups},
 };
 
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
+
+        let mut schemas = Vec::new();
+        let mut path = env::current_dir().unwrap();
+        path.push("hytale_workspaces");
+        path.push("HytaleGenerator Java");
+        // Read the directory
+        schemas = load_groups(&path).expect("Failed to load groups");
+
+
+    Ok(())
+ /* 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([1500.0, 900.0]),
 
@@ -28,6 +39,7 @@ fn main() -> eframe::Result {
             Ok(Box::<HyNodeEditor>::default())
         }),
     )
+    */
 }
 
 struct HyNodeEditor {
