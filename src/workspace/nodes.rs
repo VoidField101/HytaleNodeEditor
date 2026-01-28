@@ -1,3 +1,5 @@
+use std::{collections::HashMap, fs, io, path::Path};
+
 use serde::{self, Deserialize, Serialize};
 
 use crate::workspace::color::ColorValue;
@@ -12,6 +14,21 @@ pub struct NodeDescription {
     pub content: Vec<Content>,
     pub outputs: Vec<Connector>,
     pub inputs: Vec<Connector>,
+    pub schema: HashMap<String, SchemaObject>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase", untagged)]
+pub enum SchemaObject {
+    ConstString(String),
+    Pin(Pin)
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "PascalCase")]
+pub struct Pin {
+    pub node: String,
+    pub pin: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,4 +56,12 @@ pub struct Connector {
 #[allow(unused)]
 fn default_connector_multiple() -> bool {
     true
+}
+
+impl NodeDescription {
+    
+    pub fn load_from_file(path: &Path) -> io::Result<Self>{
+        let content= fs::read_to_string(&path)?;
+        Ok(serde_json::from_str::<NodeDescription>(&content)?)
+    }
 }

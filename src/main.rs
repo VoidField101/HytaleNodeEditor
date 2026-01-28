@@ -4,10 +4,11 @@ use egui::{Color32, Shape, Stroke};
 
 mod editor;
 mod workspace;
+mod errors;
 
 use crate::{
     editor::node::{Connection, Connector, Node},
-    workspace::{groups::NodeGroup, load_groups},
+    workspace::{groups::NodeGroup},
 };
 
 fn main() -> eframe::Result {
@@ -44,7 +45,7 @@ impl Default for HyNodeEditor {
         path.push("hytale_workspaces");
         path.push("HytaleGenerator Java");
         // Read the directory
-        schemas = load_groups(&path).expect("Failed to load groups");
+        //schemas = load_groups(&path).expect("Failed to load groups");
 
         Self {
             nodes: vec![
@@ -82,8 +83,7 @@ impl eframe::App for HyNodeEditor {
                             group.name.clone(),
                             group
                                 .color
-                                .map(|c| c.to_egui_color())
-                                .unwrap_or(Color32::GRAY),
+                                .to_egui_color()
                         ));
 
                         egui::containers::menu::SubMenu::default().show(ui, &mut button, |ui| {

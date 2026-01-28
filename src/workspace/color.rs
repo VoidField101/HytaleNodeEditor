@@ -52,6 +52,12 @@ pub enum ColorValue {
     Raw(u8, u8, u8),
 }
 
+impl Default for ColorValue {
+    fn default() -> Self {
+        Self::Named(NamedColor::Grey)
+    }
+}
+
 impl ColorValue {
     pub fn to_egui_color(&self) -> Color32 {
         match self {

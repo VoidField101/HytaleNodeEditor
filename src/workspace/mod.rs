@@ -1,47 +1,54 @@
 use std::{
-    env, error::Error, fs, io, path::{Path, PathBuf}
+    env, fmt::Display, fs::{self, DirEntry}, io, path::{Path, PathBuf}
 };
-
-use crate::workspace::{groups::NodeGroup, workspace::Workspace};
+use crate::workspace::{groups::NodeGroup, nodes::NodeDescription, workspace::{Workspace, WorkspaceSchema}};
 
 pub mod color;
 pub mod groups;
 pub mod nodes;
 pub mod workspace;
 
-pub fn load_groups(path: &Path) -> io::Result<Vec<NodeGroup>> {
+
+#[derive(thiserror::Error, Debug)]
+pub enum WorkspacePaserError {
+    #[error("Failed to read the file {0}")]
+    ReadError(PathBuf, io::Error)
+} 
+
+pub fn load_descriptions(path: &Path) -> anyhow::Result<Vec<NodeDescription>> {
+
     let entries = fs::read_dir(path)?;
     let mut schemas = Vec::new();
-    let mut generics: usize = 0;
-
     for entry in entries.flatten() {
-        let path = entry.path();
-        if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-            continue;
-        }
-
-        let name = entry
-            .file_name()
-            .into_string()
-            .map(|n| n.to_string())
-            .unwrap_or_else(|_| {
-                generics += 1;
-                format!("Generic Group {}", generics)
-            });
-
-        schemas.push(NodeGroup::load_group(&path, name)?);
+        load_descriptions_recurse(&entry, &mut schemas)?;
     }
 
     Ok(schemas)
 }
 
-pub fn load_workspace(path: &Path) -> io::Result<Workspace> {
+fn load_descriptions_recurse(entry: &DirEntry, schemas: &mut Vec<NodeDescription>) -> anyhow::Result<()> {
+    let path = entry.path();
+    if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+        let entries = fs::read_dir(&path)?;
+        for entry in entries.flatten() {
+            load_descriptions_recurse(&entry, schemas)?;
+        }
+    }
+    else if !entry.file_name().eq_ignore_ascii_case("_Workspace.json") {
+        schemas.push(NodeDescription::load_from_file(&path).map_err(|err| WorkspacePaserError::ReadError(path, err))?);
+    }
+
+    Ok(())
+}
+
+
+pub fn load_workspace(path: &Path) -> io::Result<WorkspaceSchema> {
     let mut ws_path = path.to_path_buf();
     ws_path.push("_Workspace.json");
 
     let content = fs::read_to_string(&ws_path)?;
 
-    match serde_json::from_str::<Workspace>(&content) {
+    match serde_json::from_str::<WorkspaceSchema>(&content) {
         Ok(workspace) => Ok(workspace),
         Err(err) => {
             eprintln!("Failed to parse JSON schema at: {:?}", err);
@@ -51,18 +58,18 @@ pub fn load_workspace(path: &Path) -> io::Result<Workspace> {
 }
 
 #[test]
-pub fn loading_groups() {
+pub fn loading_descriptions() {
     let mut schemas = Vec::new();
     let mut path = env::current_dir().unwrap();
     path.push("hytale_workspaces");
+    path.push("HytaleGenerator Java");
 
-    let entries = fs::read_dir(path).expect("Failed to load groups");
-    for entry in entries.flatten() {
-        let sub_path= entry.path();
-        // Read the directory
-        schemas = load_groups(&sub_path).expect("Failed to load groups");
+    //let entries = fs::read_dir(path).expect("Failed to load descriptions");
+   // for entry in entries.flatten() {
+       
+        schemas = load_descriptions(&path).expect("Failed to load descriptions");
         println!("{:?}", schemas)
-    }
+    //}
     
 }
 
@@ -72,13 +79,28 @@ pub fn loading_workspaces() {
     let mut path = env::current_dir().unwrap();
     path.push("hytale_workspaces");
 
-    let entries = fs::read_dir(path).expect("Failed to load groups");
+    let entries = fs::read_dir(path).expect("Failed to load workspaces");
     for entry in entries.flatten() {
         let sub_path= entry.path();
         // Read the directory
-        let mut schemas ;
-        schemas = load_workspace(&sub_path).expect("Failed to load groups");
-        println!("{:?}", schemas)
+        let mut workspace = load_workspace(&sub_path).expect("Failed to load workspaces");
+        println!("{:?}", workspace)
     }
+}
 
+#[test]
+pub fn generator_workspace_test() {
+    
+    let mut path = env::current_dir().unwrap();
+    path.push("hytale_workspaces");
+    path.push("HytaleGenerator Java");
+
+    let schema = load_workspace(&path).expect("Failed to load workspace");
+    let descirption = load_descriptions(&path).expect("Failed to load descriptions");
+    let workspace = Workspace::construct(schema, descirption);
+
+    workspace.groups.iter().for_each(|group| println!("{} -> {:?} -> {}", group.name, group.color, group.nodes.len() ));
+
+
+    
 }
