@@ -1,8 +1,8 @@
-use std::{borrow::Borrow, collections::HashMap};
+use std::collections::HashMap;
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
-use crate::workspace::{color::ColorValue, groups::NodeGroup, nodes::NodeDescription};
+use crate::workspace::{groups::NodeGroup, nodes::NodeDescription};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]

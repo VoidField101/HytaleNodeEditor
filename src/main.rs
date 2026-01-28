@@ -3,16 +3,16 @@ use std::env;
 use egui::{Color32, Shape, Stroke};
 
 mod editor;
-mod workspace;
 mod errors;
+mod workspace;
 
 use crate::{
     editor::node::{Connection, Connector, Node},
-    workspace::{groups::NodeGroup},
+    workspace::{load_descriptions, load_workspace, workspace::Workspace},
 };
 
 fn main() -> eframe::Result {
-    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    env_logger::init();
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([1500.0, 900.0]),
@@ -23,29 +23,29 @@ fn main() -> eframe::Result {
         "Open Hytale Nodeeditor",
         options,
         Box::new(|cc| {
-            // This gives us image support:
             egui_extras::install_image_loaders(&cc.egui_ctx);
-
             Ok(Box::<HyNodeEditor>::default())
         }),
     )
 }
 
 struct HyNodeEditor {
-    groups: Vec<NodeGroup>,
+    workspace: Workspace,
     nodes: Vec<Node>,
     connections: Vec<Connection>,
     next_id: usize,
 }
 
 impl Default for HyNodeEditor {
+    // FIXME: This really shouldn't do any file operations.
     fn default() -> Self {
-        let mut schemas = Vec::new();
         let mut path = env::current_dir().unwrap();
         path.push("hytale_workspaces");
         path.push("HytaleGenerator Java");
         // Read the directory
-        //schemas = load_groups(&path).expect("Failed to load groups");
+        let schema = load_workspace(&path).expect("Failed to load workspace");
+        let descirption = load_descriptions(&path).expect("Failed to load descriptions");
+        let workspace = Workspace::construct(schema, descirption);
 
         Self {
             nodes: vec![
@@ -67,7 +67,7 @@ impl Default for HyNodeEditor {
                 to_node: 1,
             }],
             next_id: 2,
-            groups: schemas,
+            workspace: workspace,
         }
     }
 }
@@ -78,17 +78,21 @@ impl eframe::App for HyNodeEditor {
             egui::CentralPanel::default().show(ctx, |ui| {
                 let response = ui.allocate_rect(ui.max_rect(), egui::Sense::click_and_drag());
                 response.context_menu(|ui| {
-                    self.groups.iter().for_each(|group| {
+                    self.workspace.groups.iter().for_each(|group| {
                         let mut button = ui.add(editor::striped_button::StripedButton::new(
                             group.name.clone(),
-                            group
-                                .color
-                                .to_egui_color()
+                            group.color.to_egui_color(),
                         ));
 
                         egui::containers::menu::SubMenu::default().show(ui, &mut button, |ui| {
                             group.nodes.iter().for_each(|node_description| {
-                                if ui.button(node_description.title.clone()).clicked() {
+                                let create_button =
+                                    ui.add(editor::striped_button::StripedButton::new(
+                                        node_description.title.clone(),
+                                        node_description.color.to_egui_color(),
+                                    ));
+
+                                if create_button.clicked() {
                                     // Get the current mouse position to spawn the node there
                                     let spawn_pos = ctx.input(|i| {
                                         i.pointer.interact_pos().unwrap_or(egui::Pos2::ZERO)
