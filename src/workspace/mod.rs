@@ -1,4 +1,4 @@
-use crate::workspace::{nodes::NodeDescription, workspace::WorkspaceSchema};
+use crate::workspace::{nodes::NodeDescription, schemas::WorkspaceSchema};
 use std::{
     fs::{self, DirEntry},
     io,
@@ -6,9 +6,9 @@ use std::{
 };
 
 pub mod color;
-pub mod groups;
-pub mod nodes;
 pub mod workspace;
+pub mod nodes;
+pub mod schemas;
 
 #[derive(thiserror::Error, Debug)]
 pub enum WorkspacePaserError {
