@@ -20,7 +20,7 @@ It also should be as compatible as possible with the original Editor both in ter
 ### 1. Optain the NodeEditor Workspace files
 Before you start you need the original NodeEditor because it contains the workspace files which tell the editor which modes and nodes exist.
 
-You find this **on Windows** ``%APPDATA%\Roaming\Hytale\install\release\package/game/latest/Client\NodeEditor`` on a Windows machine.
+You find this **on Windows** ``%APPDATA%\Hytale\install\release\package\game\latest\Client\NodeEditor`` on a Windows machine.
 
 If you want to use Bottles **on Linux** do the following:
  1. Create a new Bottle
@@ -28,7 +28,7 @@ If you want to use Bottles **on Linux** do the following:
  3. Go to ``Dependencies`` and install ``webview2``
  4. [Download](https://hytale.com/download) Hytale for Windows
  5. Run the installer using ``Launch Executable``
- 6. When the launcher has started install the game
+ 6. When the launcher has started install the launcher
  7. Close the game and go to ``Browse C:/ drive``
  8. Go to ``users/steamuser/AppData/Roaming/Hytale/install/release/package/game/latest/Client/NodeEditor`` (This is virtually the same path as mentioned for Windows above)
 
