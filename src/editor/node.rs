@@ -40,7 +40,7 @@ impl Node {
             .sense(egui::Sense::click_and_drag())
             .show(ui.ctx(), |ui| {
                 let mut frame = egui::Frame::window(ui.style());
-                if selected {   
+                if selected {
                     frame = frame
                         .stroke(ui.style().visuals.selection.stroke)
                         .fill(ui.style().visuals.selection.bg_fill);

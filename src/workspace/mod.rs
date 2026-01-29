@@ -6,9 +6,9 @@ use std::{
 };
 
 pub mod color;
-pub mod workspace;
 pub mod nodes;
 pub mod schemas;
+pub mod workspace;
 
 #[derive(thiserror::Error, Debug)]
 pub enum WorkspacePaserError {
@@ -63,8 +63,8 @@ pub fn load_workspace(path: &Path) -> io::Result<WorkspaceSchema> {
 
 #[cfg(test)]
 mod tests {
-    use std::{env, fs};
     use crate::workspace::{load_descriptions, load_workspace, workspace::Workspace};
+    use std::{env, fs};
 
     #[test]
     pub fn loading_descriptions() {

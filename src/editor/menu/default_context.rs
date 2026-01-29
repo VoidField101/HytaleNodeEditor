@@ -1,11 +1,7 @@
-
 use egui::Ui;
 
 use crate::{
-    editor::{
-        self,
-        Action,
-    },
+    editor::{self, Action},
     workspace::{nodes::NodeDescription, workspace::NodeGroup},
 };
 
@@ -30,12 +26,9 @@ pub fn draw_default_context(
 
     if response.clicked() {
         Some(Action::EmptyClick)
-    }
-    else {
+    } else {
         action.map(|desc| Action::AddNode(desc))
     }
-
-    
 }
 
 fn draw_group_submenu(

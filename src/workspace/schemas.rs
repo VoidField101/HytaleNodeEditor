@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct WorkspaceSchema {
@@ -27,7 +26,6 @@ pub struct Variant {
     pub variant_field_name: String,
     pub variants: HashMap<String, String>,
 }
-
 
 #[allow(unused)]
 fn default_allow_exports() -> bool {
