@@ -4,10 +4,12 @@ mod editor;
 mod errors;
 mod workspace;
 
+use egui::CornerRadius;
+
 use crate::{
     editor::{
         Action,
-        connection::Connection,
+        connection::{Connection, ConnectionPartial},
         node::{Connector, Node},
     },
     workspace::{load_descriptions, load_workspace, workspace::Workspace},
@@ -37,6 +39,7 @@ struct HyNodeEditor {
     connections: Vec<Connection>,
     next_id: usize,
     selected_node: Option<usize>,
+    partial: Option<ConnectionPartial>,
 }
 
 impl Default for HyNodeEditor {
@@ -56,30 +59,62 @@ impl Default for HyNodeEditor {
                     id: 0,
                     pos: egui::pos2(100.0, 100.0),
                     label: "Source".into(),
+                    outputs: vec![Connector {
+                        name: "Out".to_string(),
+                        color: egui::Color32::PURPLE,
+                        pos: egui::pos2(0.0, 0.0),
+                        port_index: 0,
+                        is_input: false,
+                    }],
                     ..Default::default()
                 },
                 Node {
                     id: 1,
                     pos: egui::pos2(300.0, 150.0),
                     label: "Target".into(),
+                    inputs: vec![Connector {
+                        name: "In".to_string(),
+                        color: egui::Color32::PURPLE,
+                        pos: egui::pos2(0.0, 0.0),
+                        port_index: 0,
+                        is_input: true,
+                    }],
                     ..Default::default()
                 },
             ],
             connections: vec![Connection {
                 from_node: 0,
                 to_node: 1,
+                from_connector: 0,
+                to_connector: 0,
             }],
             selected_node: None,
             next_id: 2,
             workspace: workspace,
+            partial: Some(ConnectionPartial {
+                from_node: 0,
+                from_connector: 0,
+                reverse: false,
+            }),
         }
     }
 }
 
 impl eframe::App for HyNodeEditor {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        ctx.style_mut(|style| {
+            style.visuals.menu_corner_radius = CornerRadius::ZERO;
+            style.visuals.widgets.active.corner_radius = CornerRadius::ZERO;
+            style.visuals.widgets.inactive.corner_radius = CornerRadius::ZERO;
+            style.visuals.widgets.noninteractive.corner_radius = CornerRadius::ZERO;
+            style.visuals.widgets.open.corner_radius = CornerRadius::ZERO;
+            style.visuals.widgets.hovered.corner_radius = CornerRadius::ZERO;
+        });
+
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::CentralPanel::default().show(ctx, |ui| {
+                
+
                 let mut action = editor::menu::draw_default_context(
                     ui,
                     &self.workspace.groups,
@@ -89,6 +124,14 @@ impl eframe::App for HyNodeEditor {
                 for node in &mut self.nodes {
                     action = action
                         .or(node.draw(ui, node.id == self.selected_node.unwrap_or(usize::MAX)));
+                }
+
+                for conn in &mut self.connections {
+                    conn.draw(ui, &self.nodes);
+                }
+
+                if let Some(partial) = &mut self.partial {
+                    partial.draw(ui, &self.nodes);
                 }
 
                 let spawn_pos = ctx.input(|i| i.pointer.interact_pos().unwrap_or(egui::Pos2::ZERO));
@@ -137,10 +180,15 @@ impl eframe::App for HyNodeEditor {
                     }
                     Some(Action::EmptyClick) => {
                         self.selected_node = None;
+                        self.partial = None;
                     }
                     None => {}
                 }
             });
         });
+
+        if self.partial.is_some() {
+            ctx.request_repaint_after_secs(1.0 / 60.0);
+        }
     }
 }

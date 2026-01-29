@@ -19,17 +19,17 @@ impl Widget for StripedButton {
         let button_padding = ui.spacing().button_padding;
         let galley = ui.painter().layout_no_wrap(
             self.text,
-            egui::FontId::proportional(14.0),
+            egui::FontId::proportional(16.0),
             ui.visuals().widgets.active.fg_stroke.color,
         );
-        let stripe_width = 4.0;
+        let stripe_width = 6.0;
         let gap = 4.0;
         let desired_size = Vec2::new(
             stripe_width + gap + galley.size().x + button_padding.x * 2.0,
             galley.size().y + button_padding.y * 2.0,
         );
 
-        let (rect, response) = ui.allocate_exact_size(desired_size, Sense::click());
+        let (rect, response) = ui.allocate_at_least(desired_size, Sense::click());
 
         if ui.is_rect_visible(rect) {
             let visuals = ui.style().interact(&response);
