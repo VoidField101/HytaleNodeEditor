@@ -1,10 +1,11 @@
-use std::{env, usize};
+use std::{env, fs, usize};
 
 mod editor;
 mod errors;
+mod generator;
 mod workspace;
 
-use egui::CornerRadius;
+use egui::{CornerRadius, vec2};
 
 use crate::{
     editor::{
@@ -12,6 +13,7 @@ use crate::{
         connection::{Connection, ConnectionPartial},
         node::{Connector, Node},
     },
+    generator::biome,
     workspace::{load_descriptions, load_workspace, workspace::Workspace},
 };
 
@@ -34,6 +36,7 @@ fn main() -> eframe::Result {
 }
 
 struct HyNodeEditor {
+    pan_offset: egui::Vec2,
     workspace: Workspace,
     nodes: Vec<Node>,
     connections: Vec<Connection>,
@@ -45,57 +48,34 @@ struct HyNodeEditor {
 impl Default for HyNodeEditor {
     // FIXME: This really shouldn't do any file operations.
     fn default() -> Self {
-        let mut path = env::current_dir().unwrap();
-        path.push("hytale_workspaces");
-        path.push("HytaleGenerator Java");
+        let mut path_workspace = env::current_dir().unwrap();
+        path_workspace.push("hytale_workspaces");
+        path_workspace.push("HytaleGenerator Java");
         // Read the directory
-        let schema = load_workspace(&path).expect("Failed to load workspace");
-        let descirption = load_descriptions(&path).expect("Failed to load descriptions");
+        let schema = load_workspace(&path_workspace).expect("Failed to load workspace");
+        let descirption = load_descriptions(&path_workspace).expect("Failed to load descriptions");
         let workspace = Workspace::construct(schema, descirption);
 
+        let mut path = env::current_dir().unwrap();
+        path.push("hytale_assets");
+        path.push("HytaleGenerator");
+        path.push("Biomes");
+        path.push("Basic.json");
+
+        let content = fs::read_to_string(path).expect("Could not read file");
+        let node = serde_json::from_str::<biome::RootNode>(&content).unwrap();
+        let norm = node.normalize(&workspace, "Biome").expect("Faile");
+
+        let (conn, nodes) = norm.0.to_editor(&workspace);
+
         Self {
-            nodes: vec![
-                Node {
-                    id: 0,
-                    pos: egui::pos2(100.0, 100.0),
-                    label: "Source".into(),
-                    outputs: vec![Connector {
-                        name: "Out".to_string(),
-                        color: egui::Color32::PURPLE,
-                        pos: egui::pos2(0.0, 0.0),
-                        port_index: 0,
-                        is_input: false,
-                    }],
-                    ..Default::default()
-                },
-                Node {
-                    id: 1,
-                    pos: egui::pos2(300.0, 150.0),
-                    label: "Target".into(),
-                    inputs: vec![Connector {
-                        name: "In".to_string(),
-                        color: egui::Color32::PURPLE,
-                        pos: egui::pos2(0.0, 0.0),
-                        port_index: 0,
-                        is_input: true,
-                    }],
-                    ..Default::default()
-                },
-            ],
-            connections: vec![Connection {
-                from_node: 0,
-                to_node: 1,
-                from_connector: 0,
-                to_connector: 0,
-            }],
+            nodes: nodes,
+            connections: conn,
             selected_node: None,
             next_id: 2,
             workspace: workspace,
-            partial: Some(ConnectionPartial {
-                from_node: 0,
-                from_connector: 0,
-                reverse: false,
-            }),
+            pan_offset: vec2(0.0, 0.0),
+            partial: None,
         }
     }
 }
@@ -113,8 +93,6 @@ impl eframe::App for HyNodeEditor {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                
-
                 let mut action = editor::menu::draw_default_context(
                     ui,
                     &self.workspace.groups,
@@ -172,6 +150,15 @@ impl eframe::App for HyNodeEditor {
                             .enumerate()
                             .find(|node| node.1.id == node_index)
                         {
+                            if let Some(partial) = &self.partial
+                                && partial.from_node == index.0
+                            {
+                                self.partial = None
+                            }
+
+                            self.connections
+                                .retain(|con| con.from_node != index.0 && con.to_node != index.0);
+
                             self.nodes.remove(index.0);
                         }
                     }
