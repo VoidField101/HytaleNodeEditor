@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use strum_macros::{AsRefStr, EnumString};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, AsRefStr)]
-#[strum(serialize_all = "PascalCase")]
+#[strum(serialize_all = "PascalCase", ascii_case_insensitive)]
 pub enum NamedColor {
     DarkPink,
     Pink,

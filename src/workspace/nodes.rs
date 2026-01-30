@@ -2,6 +2,8 @@ use std::{collections::HashMap, fs, io, path::Path};
 
 use serde::{self, Deserialize, Serialize};
 
+use serde_aux::prelude::*;
+
 use crate::workspace::{color::ColorValue, workspace::Workspace};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -11,21 +13,27 @@ pub struct NodeDescription {
     pub title: String,
     pub color: ColorValue,
 
+    #[serde(default)]
     pub content: Vec<Content>,
+    #[serde(default)]
     pub outputs: Vec<Connector>,
+    #[serde(default)]
     pub inputs: Vec<Connector>,
+    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_struct_case_insensitive")]
     pub schema: HashMap<String, SchemaObject>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "PascalCase", untagged)]
+#[serde(untagged)]
 pub enum SchemaObject {
     ConstString(String),
+    #[serde(deserialize_with = "deserialize_struct_case_insensitive")]
     Pin(Pin),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all(serialize = "PascalCase"))]
 pub struct Pin {
     pub node: String,
     pub pin: String,
@@ -40,7 +48,7 @@ pub struct Content {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "PascalCase", deny_unknown_fields)]
+#[serde(rename_all = "PascalCase")]
 pub struct Connector {
     pub id: String,
     #[serde(rename = "Type")]
@@ -59,9 +67,12 @@ fn default_connector_multiple() -> bool {
 }
 
 impl NodeDescription {
-    pub fn load_from_file(path: &Path) -> io::Result<Self> {
+    pub fn load_from_file(path: &Path) -> anyhow::Result<Self> {
         let content = fs::read_to_string(&path)?;
-        Ok(serde_json::from_str::<NodeDescription>(&content)?)
+        let start = content
+            .find(|c| c == '{')
+            .ok_or(anyhow::Error::msg("No start of JSON found"))?;
+        Ok(serde_json::from_str::<NodeDescription>(&content[start..])?)
     }
 
     pub fn get_connector<'a>(&'a self, key: &str) -> Option<(usize, &'a Connector)> {
@@ -100,7 +111,7 @@ impl NodeDescription {
                 resolver(&variant.variant_field_name)
                     .and_then(|res| variant.variants.get(res))
                     .and_then(|vaiant_name| {
-                        workspace.nodes.iter().find(|desc| desc.id == *vaiant_name)
+                        workspace.nodes.iter().find(|desc| desc.id.eq(vaiant_name))
                     })
             } else {
                 workspace.nodes.iter().find(|desc| desc.id == pin.node)

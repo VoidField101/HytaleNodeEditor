@@ -12,8 +12,8 @@ pub mod workspace;
 
 #[derive(thiserror::Error, Debug)]
 pub enum WorkspacePaserError {
-    #[error("Failed to read the file {0}")]
-    ReadError(PathBuf, io::Error),
+    #[error("Failed to read the file {0}: {1}")]
+    ReadError(PathBuf, anyhow::Error),
 }
 
 pub fn load_descriptions(path: &Path) -> anyhow::Result<Vec<NodeDescription>> {
@@ -46,6 +46,7 @@ fn load_descriptions_recurse(
     Ok(())
 }
 
+
 pub fn load_workspace(path: &Path) -> io::Result<WorkspaceSchema> {
     let mut ws_path = path.to_path_buf();
     ws_path.push("_Workspace.json");
@@ -63,21 +64,39 @@ pub fn load_workspace(path: &Path) -> io::Result<WorkspaceSchema> {
 
 #[cfg(test)]
 mod tests {
+    use egui::ahash::HashSet;
+
     use crate::workspace::{load_descriptions, load_workspace, workspace::Workspace};
     use std::{env, fs};
 
     #[test]
-    pub fn loading_descriptions() {
+    pub fn loading_descriptions() -> anyhow::Result<()> {
         let mut schemas = Vec::new();
         let mut path = env::current_dir().unwrap();
+        path.push("hytale_workspaces");
+        path.push("ScriptableBrushes");
+
+        //let entries = fs::read_dir(path).expect("Failed to load descriptions");
+        // for entry in entries.flatten() {
+
+        schemas = load_descriptions(&path)?;
+        println!("{:?}", schemas);
+
+                let mut path = env::current_dir().unwrap();
         path.push("hytale_workspaces");
         path.push("HytaleGenerator Java");
 
         //let entries = fs::read_dir(path).expect("Failed to load descriptions");
         // for entry in entries.flatten() {
 
-        schemas = load_descriptions(&path).expect("Failed to load descriptions");
-        println!("{:?}", schemas)
+        schemas.extend(load_descriptions(&path)?);
+        println!("{:?}", schemas);
+
+        let types = schemas.iter().map(|schema| &schema.content).flatten().map(|c| c.typ.clone()).collect::<HashSet<_>>();
+        
+        println!("{:?}", types);
+
+        Ok(())
         //}
     }
 
