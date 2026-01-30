@@ -6,7 +6,10 @@ use egui::{pos2, vec2};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    editor::{self, node::{HyConnection, HyNodePin}},
+    editor::{
+        self,
+        node::{HyConnection, HyNodePin},
+    },
     generator::common::{Group, NodeId, Position, WorksheetInfo},
     workspace::{nodes::NodeDescription, workspace::Workspace},
 };
@@ -197,7 +200,10 @@ impl Node {
 }
 
 impl NormalizedNode {
-    pub fn to_editor(&self, workspace: &Workspace) -> (Vec<HyConnection>, Vec<editor::node::HyNode>) {
+    pub fn to_editor(
+        &self,
+        workspace: &Workspace,
+    ) -> (Vec<HyConnection>, Vec<editor::node::HyNode>) {
         let mut connections = Vec::new();
         let mut nodes = Vec::new();
 

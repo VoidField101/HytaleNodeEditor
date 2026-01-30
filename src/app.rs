@@ -1,7 +1,7 @@
 use std::{env, fs};
 
 use eframe::CreationContext;
-use egui::{CornerRadius, Frame, Id, Margin, vec2};
+use egui::{CornerRadius, Frame, Id, Margin};
 use egui_snarl::{
     InPinId, NodeId, OutPinId, Snarl,
     ui::{NodeLayout, PinPlacement, SnarlStyle, SnarlWidget},
@@ -9,12 +9,11 @@ use egui_snarl::{
 
 use crate::{
     editor::{
-        self,
-        node::{HyNode, HyNodePin},
+        node::HyNode,
         viewer::HyNodeViewer,
     },
     generator::nodes_v1,
-    workspace::{self, load_descriptions, load_workspace, workspace::Workspace},
+    workspace::{load_descriptions, load_workspace, workspace::Workspace},
 };
 
 //type MyGraph = Graph<MyNodeData, MyDataType, MyValueType>;
@@ -65,7 +64,7 @@ impl HyNodeEditor {
         for node in nodes.into_iter() {
             snarl.insert_node(node.pos, node);
         }
-       
+
         for connection in conn.iter() {
             snarl.connect(
                 OutPinId {
@@ -101,16 +100,22 @@ impl eframe::App for HyNodeEditor {
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {});
 
-        egui::CentralPanel::default().frame(Frame{
-            inner_margin: Margin::ZERO,
-            ..Default::default()
-        }).show(ctx, |ui| {
-            SnarlWidget::new()
-                .id(Id::new("snarl-workspace"))
-                .style(self.snarl_style)
-                .show(&mut self.snarl, &mut HyNodeViewer {
-                    workspace: &self.workspace
-                }, ui);
-        });
+        egui::CentralPanel::default()
+            .frame(Frame {
+                inner_margin: Margin::ZERO,
+                ..Default::default()
+            })
+            .show(ctx, |ui| {
+                SnarlWidget::new()
+                    .id(Id::new("snarl-workspace"))
+                    .style(self.snarl_style)
+                    .show(
+                        &mut self.snarl,
+                        &mut HyNodeViewer {
+                            workspace: &self.workspace,
+                        },
+                        ui,
+                    );
+            });
     }
 }

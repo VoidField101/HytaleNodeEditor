@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     editor::{
         self,
-        node::{HyNodePin, HyConnection},
+        node::{HyConnection, HyNodePin},
     },
     generator::common::{Group, NodeId, Position, WorksheetInfo},
     workspace::{nodes::NodeDescription, workspace::Workspace},
@@ -200,7 +200,10 @@ impl Node {
 }
 
 impl NormalizedNode {
-    pub fn to_editor(&self, workspace: &Workspace) -> (Vec<HyConnection>, Vec<editor::node::HyNode>) {
+    pub fn to_editor(
+        &self,
+        workspace: &Workspace,
+    ) -> (Vec<HyConnection>, Vec<editor::node::HyNode>) {
         let mut connections = Vec::new();
         let mut nodes = Vec::new();
 
@@ -246,7 +249,7 @@ impl NormalizedNode {
             .map(|(index, conn)| HyNodePin {
                 name: conn.label.clone(),
                 color: conn.color.to_egui_color(),
-                allow_multiple: conn.multiple
+                allow_multiple: conn.multiple,
             })
             .collect();
 
@@ -257,7 +260,7 @@ impl NormalizedNode {
             .map(|(index, conn)| HyNodePin {
                 name: conn.label.clone(),
                 color: conn.color.to_egui_color(),
-                allow_multiple: conn.multiple
+                allow_multiple: conn.multiple,
             })
             .collect();
 

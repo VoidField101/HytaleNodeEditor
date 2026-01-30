@@ -1,5 +1,4 @@
-use egui::{Color32, Pos2, Shape, Ui, vec2};
-use egui_snarl::ui::SnarlPin;
+use egui::{Color32, Pos2, Ui};
 
 use crate::editor::{menu::MenuAction, menu::draw_node_context};
 
@@ -27,9 +26,8 @@ pub struct HyConnection {
     pub to_connector: usize,
 }
 
-
 impl HyNode {
-    pub fn draw(&mut self, ui: &mut Ui, selected: bool) -> Option<MenuAction> {
+    pub fn draw(&mut self, ui: &mut Ui, selected: bool) -> Option<MenuAction<'_>> {
         let mut action = None;
         let res = egui::Area::new(egui::Id::new(self.id))
             .fixed_pos(self.pos)
@@ -45,7 +43,7 @@ impl HyNode {
                 frame.show(ui, |ui| {
                     ui.horizontal(|ui| {
                         ui.style_mut().interaction.selectable_labels = false;
-                    
+
                         ui.label(&self.label);
                         // Draw the port shape
                     });
@@ -55,9 +53,9 @@ impl HyNode {
         let drag_resp = res.response;
         if drag_resp.dragged() {
             self.pos += drag_resp.drag_delta();
-           // action = Some(Action::SelectNode(self.id));
+            // action = Some(Action::SelectNode(self.id));
         } else if drag_resp.clicked() {
-           // action = Some(Action::SelectNode(self.id));
+            // action = Some(Action::SelectNode(self.id));
         }
         drag_resp.context_menu(|ui| {
             action = draw_node_context(ui, &self);

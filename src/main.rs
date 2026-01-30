@@ -1,10 +1,10 @@
 use crate::app::HyNodeEditor;
 
+mod app;
 mod editor;
 mod errors;
 mod generator;
 mod workspace;
-mod app;
 
 fn main() -> eframe::Result {
     env_logger::init();

@@ -1,9 +1,9 @@
 use std::usize;
 
-use egui::{Id, Rect, Sense, Ui, accesskit::ActionHandler};
+use egui::Ui;
 use egui_snarl::{
     InPin, NodeId, OutPin, Snarl,
-    ui::{PinInfo, SnarlViewer, get_selected_nodes},
+    ui::{PinInfo, SnarlViewer},
 };
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
         menu::MenuAction,
         node::{HyNode, HyNodePin},
     },
-    workspace::{nodes::Pin, workspace::Workspace},
+    workspace::workspace::Workspace,
 };
 
 pub struct HyNodeViewer<'a> {

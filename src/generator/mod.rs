@@ -1,6 +1,6 @@
+pub mod common;
 pub mod nodes_v1;
 pub mod nodes_v2;
-pub mod common;
 
 #[cfg(test)]
 mod tests {
