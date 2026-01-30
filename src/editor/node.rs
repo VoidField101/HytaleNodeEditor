@@ -1,39 +1,35 @@
 use egui::{Color32, Pos2, Shape, Ui, vec2};
+use egui_snarl::ui::SnarlPin;
 
-use crate::editor::{Action, menu::draw_node_context};
+use crate::editor::{menu::MenuAction, menu::draw_node_context};
 
 #[derive(Default, Clone)]
-pub struct Connector {
+pub struct HyNodePin {
     pub name: String,
     pub color: Color32,
-    pub pos: Pos2,
-    pub port_index: usize,
-    pub is_input: bool,
+    pub allow_multiple: bool,
 }
 
 #[derive(Default, Clone)]
-pub struct Node {
+pub struct HyNode {
     pub id: usize,
     pub pos: Pos2,
     pub label: String,
-    pub inputs: Vec<Connector>,
-    pub outputs: Vec<Connector>,
+    pub inputs: Vec<HyNodePin>,
+    pub outputs: Vec<HyNodePin>,
 }
 
-impl Connector {
-    pub fn draw(&mut self, ui: &mut Ui, center: Pos2, _input: bool) {
-        const SIZE: f32 = 7.0;
-        let painter = ui.painter();
-        let color = self.color;
-
-        self.pos = center;
-
-        painter.add(Shape::circle_filled(center, SIZE, color));
-    }
+#[derive(Default)]
+pub struct HyConnection {
+    pub from_node: usize,
+    pub from_connector: usize,
+    pub to_node: usize,
+    pub to_connector: usize,
 }
 
-impl Node {
-    pub fn draw(&mut self, ui: &mut Ui, selected: bool) -> Option<Action> {
+
+impl HyNode {
+    pub fn draw(&mut self, ui: &mut Ui, selected: bool) -> Option<MenuAction> {
         let mut action = None;
         let res = egui::Area::new(egui::Id::new(self.id))
             .fixed_pos(self.pos)
@@ -49,28 +45,9 @@ impl Node {
                 frame.show(ui, |ui| {
                     ui.horizontal(|ui| {
                         ui.style_mut().interaction.selectable_labels = false;
-                        ui.vertical(|ui| {
-                            self.inputs.iter_mut().for_each(|connector| {
-                                let (rect, _) = ui.allocate_at_least(
-                                    egui::vec2(10.0, 20.0),
-                                    egui::Sense::hover(),
-                                );
-                                connector.draw(ui, rect.center() - vec2(10.0, 0.0), true)
-                            });
-                        });
-
+                    
                         ui.label(&self.label);
                         // Draw the port shape
-
-                        ui.vertical(|ui| {
-                            self.outputs.iter_mut().for_each(|connector| {
-                                let (rect, _) = ui.allocate_at_least(
-                                    egui::vec2(10.0, 20.0),
-                                    egui::Sense::hover(),
-                                );
-                                connector.draw(ui, rect.center() + vec2(10.0, 0.0), false)
-                            });
-                        });
                     });
                 });
             });
@@ -78,9 +55,9 @@ impl Node {
         let drag_resp = res.response;
         if drag_resp.dragged() {
             self.pos += drag_resp.drag_delta();
-            action = Some(Action::SelectNode(self.id));
+           // action = Some(Action::SelectNode(self.id));
         } else if drag_resp.clicked() {
-            action = Some(Action::SelectNode(self.id));
+           // action = Some(Action::SelectNode(self.id));
         }
         drag_resp.context_menu(|ui| {
             action = draw_node_context(ui, &self);

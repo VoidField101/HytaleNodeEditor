@@ -1,8 +1,8 @@
 use egui::Ui;
 
-use crate::editor::{Action, node::Node};
+use crate::editor::{menu::MenuAction, node::HyNode};
 
-pub fn draw_node_context(ui: &mut Ui, node: &Node) -> Option<Action> {
+pub fn draw_node_context<'a>(ui: &mut Ui, node: &HyNode) -> Option<MenuAction<'a>> {
     let mut action = Option::None;
     egui::ScrollArea::vertical()
         .max_height(800.0) // Limits the menu height so it doesn't go off-screen
@@ -12,5 +12,5 @@ pub fn draw_node_context(ui: &mut Ui, node: &Node) -> Option<Action> {
             }
         });
 
-    action.map(|desc| Action::RemoveNode(desc))
+    action.map(|desc| MenuAction::RemoveNode)
 }

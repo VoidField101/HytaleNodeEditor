@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use uuid::{Uuid, uuid};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Position {
@@ -36,10 +37,23 @@ pub struct WorksheetInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct NodeId(String);
+pub struct NodeId(pub String);
 
 impl Default for Position {
     fn default() -> Self {
         Self { x: 0, y: 0 }
+    }
+}
+
+impl NodeId {
+    pub fn try_parse(&self) -> Option<(&str, Uuid)> {
+        self.0.chars().position(|c| c == '-').and_then(|pos| {
+            let (name, uid_str) = self.0.split_at(pos);
+            Uuid::try_parse(uid_str).map(|uuid| (name, uuid)).ok()
+        })
+    }
+
+    pub fn from_parts(name: &str, uuid: &Uuid) -> Self {
+        Self(format!("{}-{}", name, uuid.as_hyphenated().to_string()))
     }
 }

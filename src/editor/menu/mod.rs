@@ -3,3 +3,10 @@ mod node_context;
 
 pub use default_context::draw_default_context;
 pub use node_context::draw_node_context;
+
+use crate::workspace::nodes::NodeDescription;
+
+pub enum MenuAction<'a> {
+    AddNode(&'a NodeDescription),
+    RemoveNode,
+}

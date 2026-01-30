@@ -1,34 +1,31 @@
 use egui::Ui;
 
 use crate::{
-    editor::{self, Action},
+    editor::{self, menu::MenuAction},
     workspace::{nodes::NodeDescription, workspace::NodeGroup},
 };
 
-pub fn draw_default_context(
+pub fn draw_default_context<'a>(
     ui: &mut Ui,
-    groups: &[NodeGroup],
-    descriptors: &[NodeDescription],
-) -> Option<Action> {
-    let response = ui.allocate_rect(ui.max_rect(), egui::Sense::click_and_drag());
+    groups: & [NodeGroup],
+    descriptors: &'a [NodeDescription],
+) -> Option<MenuAction<'a>> {
+    //let response = ui.allocate_rect(ui.max_rect(), egui::Sense::click_and_drag());
     let mut action = Option::None;
-    response.context_menu(|ui| {
+    //response.context_menu(|ui| {
         egui::ScrollArea::vertical()
             .max_height(800.0) // Limits the menu height so it doesn't go off-screen
             .show(ui, |ui| {
                 for group in groups.iter() {
                     if let Some(node) = draw_group_submenu(ui, group, descriptors) {
-                        action = Some(node);
+                        action = Some(&descriptors[node]);
                     }
                 }
             });
-    });
+    //});
 
-    if response.clicked() {
-        Some(Action::EmptyClick)
-    } else {
-        action.map(|desc| Action::AddNode(desc))
-    }
+
+    action.map(|desc| MenuAction::AddNode(desc))
 }
 
 fn draw_group_submenu(

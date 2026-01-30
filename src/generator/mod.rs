@@ -1,10 +1,11 @@
-pub mod biome;
+pub mod nodes_v1;
+pub mod nodes_v2;
 pub mod common;
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        generator::biome,
+        generator::nodes_v1,
         workspace::{load_descriptions, load_workspace, workspace::Workspace},
     };
     use std::{env, fs};
@@ -15,10 +16,11 @@ mod tests {
         path.push("hytale_assets");
         path.push("HytaleGenerator");
         path.push("Biomes");
-        path.push("Basic.json");
+        path.push("Volcanic1");
+        path.push("Volcanic1_Shore.json");
 
         let content = fs::read_to_string(path).expect("Could not read file");
-        let node = serde_json::from_str::<biome::RootNode>(&content).unwrap();
+        let node = serde_json::from_str::<nodes_v1::RootNode>(&content).unwrap();
         println!("{:?}", node);
     }
 
@@ -39,7 +41,7 @@ mod tests {
         let workspace = Workspace::construct(schema, descirption);
 
         let content = fs::read_to_string(path).expect("Could not read file");
-        let node = serde_json::from_str::<biome::RootNode>(&content).unwrap();
+        let node = serde_json::from_str::<nodes_v1::RootNode>(&content).unwrap();
         let norm = node.normalize(&workspace, "Biome").expect("Faile");
         println!("{:?}", norm);
     }

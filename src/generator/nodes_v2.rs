@@ -6,11 +6,7 @@ use egui::{pos2, vec2};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    editor::{
-        self,
-        connection::Connection,
-        node::Connector,
-    },
+    editor::{self, node::{HyConnection, HyNodePin}},
     generator::common::{Group, NodeId, Position, WorksheetInfo},
     workspace::{nodes::NodeDescription, workspace::Workspace},
 };
@@ -26,6 +22,7 @@ pub enum NodeValue {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde_with::skip_serializing_none]
 pub struct Node {
     #[serde(rename = "$Position", default)]
     pub position: Position,
@@ -42,7 +39,7 @@ pub struct Node {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RootNode {
-    #[serde(rename = "$Title")]
+    #[serde(rename = "$Title", default)]
     pub title: String,
     #[serde(rename = "$WorkspaceID")]
     pub workspace_id: String,
@@ -56,6 +53,7 @@ pub struct RootNode {
 pub struct NormalizedNode {
     pub position: Position,
     pub comment: Option<String>,
+    pub node_id: Option<NodeId>,
     pub variant: String,
     pub values: HashMap<String, NodeValue>,
     pub outputs: HashMap<String, Vec<NormalizedNode>>,
@@ -190,6 +188,7 @@ impl Node {
         Ok(NormalizedNode {
             position: self.position,
             comment: self.comment,
+            node_id: self.nodeId,
             variant: description.id.clone(),
             values: remaining,
             outputs: outputs,
@@ -198,7 +197,7 @@ impl Node {
 }
 
 impl NormalizedNode {
-    pub fn to_editor(&self, workspace: &Workspace) -> (Vec<Connection>, Vec<editor::node::Node>) {
+    pub fn to_editor(&self, workspace: &Workspace) -> (Vec<HyConnection>, Vec<editor::node::HyNode>) {
         let mut connections = Vec::new();
         let mut nodes = Vec::new();
 
@@ -229,9 +228,10 @@ impl NormalizedNode {
         &self,
         node_map: &HashMap<String, usize>,
         workspace: &Workspace,
-        connections: &mut Vec<Connection>,
-        nodes: &mut Vec<editor::node::Node>,
+        connections: &mut Vec<HyConnection>,
+        nodes: &mut Vec<editor::node::HyNode>,
     ) -> usize {
+        // FIXME: Replace unwrap with propper error handling!
         let desc_index = node_map.get(&self.variant).unwrap();
         let desc = &workspace.nodes[*desc_index];
         let new_id = nodes.len();
@@ -240,12 +240,10 @@ impl NormalizedNode {
             .inputs
             .iter()
             .enumerate()
-            .map(|(index, conn)| Connector {
+            .map(|(index, conn)| HyNodePin {
                 name: conn.label.clone(),
                 color: conn.color.to_egui_color(),
-                pos: pos2(0.0, 0.0),
-                port_index: index,
-                is_input: true,
+                allow_multiple: conn.multiple,
             })
             .collect();
 
@@ -253,16 +251,14 @@ impl NormalizedNode {
             .outputs
             .iter()
             .enumerate()
-            .map(|(index, conn)| Connector {
+            .map(|(index, conn)| HyNodePin {
                 name: conn.label.clone(),
                 color: conn.color.to_egui_color(),
-                pos: pos2(0.0, 0.0),
-                port_index: index,
-                is_input: true,
+                allow_multiple: conn.multiple,
             })
             .collect();
 
-        nodes.push(editor::node::Node {
+        nodes.push(editor::node::HyNode {
             id: new_id,
             pos: pos2(self.position.x as f32, self.position.y as f32),
             label: desc.title.clone(),
@@ -274,16 +270,17 @@ impl NormalizedNode {
             .iter()
             .enumerate()
             .for_each(|(index, (connector_name, new_nodes))| {
+                // FIXME: Replace unwrap with propper error handling!
                 let conn_index = desc.get_connector(connector_name).unwrap().0;
 
                 new_nodes.iter().for_each(|node| {
                     let sub_id = node.to_editor_internal(node_map, workspace, connections, nodes);
 
-                    connections.push(Connection {
+                    connections.push(HyConnection {
                         from_node: new_id,
                         from_connector: conn_index,
                         to_node: sub_id,
-                        to_connector: 0,
+                        to_connector: 0, //TODO: Figure out how multi-input nodes are handled
                     });
                 });
             });
