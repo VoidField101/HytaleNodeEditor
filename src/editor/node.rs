@@ -38,6 +38,13 @@ pub struct HyConnection {
 }
 
 impl<'a> HyNode<'a> {
+    pub fn new(description: &'a NodeDescription) -> Self {
+        Self {
+            title: description.title.clone(),
+            description,
+        }
+    }
+
     pub fn draw_content(&mut self, ui: &mut Ui) {}
 }
 

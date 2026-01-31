@@ -3,7 +3,6 @@ pub mod node;
 pub mod striped_button;
 
 pub mod viewer;
-pub mod values;
 
 
 #[derive(thiserror::Error, Debug)]

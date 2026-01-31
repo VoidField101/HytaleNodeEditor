@@ -18,7 +18,9 @@ pub struct HyNodeViewer<'a> {
     pub workspace: &'a Workspace,
 }
 
-impl<'a, 'b> SnarlViewer<HyNode<'b>> for HyNodeViewer<'a> {
+impl<'a, 'b> SnarlViewer<HyNode<'b>> for HyNodeViewer<'a>
+    where 'a: 'b
+{
     fn title(&mut self, node: &HyNode) -> String {
         node.title.to_owned()
     }
@@ -53,29 +55,16 @@ impl<'a, 'b> SnarlViewer<HyNode<'b>> for HyNodeViewer<'a> {
         true
     }
 
-    fn show_graph_menu(&mut self, pos: egui::Pos2, ui: &mut Ui, snarl: &mut Snarl<HyNode>) {
-        /*match super::menu::draw_default_context(ui, &self.workspace.groups, &self.workspace.nodes) {
+    fn show_graph_menu(&mut self, pos: egui::Pos2, ui: &mut Ui, snarl: &mut Snarl<HyNode<'b>>) {
+        match super::menu::draw_default_context(ui, &self.workspace.groups, &self.workspace.nodes) {
             Some(MenuAction::AddNode(descriptor)) => {
                 snarl.insert_node(
                     pos,
-                    HyNode {
-                        label: descriptor.title.clone(),
-                        inputs: descriptor
-                            .inputs
-                            .iter()
-                            .map(|conn| conn.clone().into())
-                            .collect::<Vec<_>>(),
-                        outputs: descriptor
-                            .outputs
-                            .iter()
-                            .map(|conn| conn.clone().into())
-                            .collect::<Vec<_>>(),
-                        description: todo!(),
-                    },
+                    HyNode::new(descriptor),
                 );
             }
             _ => {}
-        }*/
+        }
     }
 
     #[allow(refining_impl_trait)]
