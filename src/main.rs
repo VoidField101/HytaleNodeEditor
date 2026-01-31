@@ -19,7 +19,7 @@ fn main() -> eframe::Result {
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
-            Ok(Box::new(HyNodeEditor::new(cc)))
+            Ok(HyNodeEditor::build(cc))
         }),
     )
 }

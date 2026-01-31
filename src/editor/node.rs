@@ -3,29 +3,30 @@ use std::collections::HashMap;
 use egui::{Color32, Pos2, Ui};
 
 use crate::{
-    workspace::nodes::Connector,
+    editor::{
+        EditorError,
+        values::{HyNodeContent, NodeValue},
+    },
+    workspace::{
+        self,
+        nodes::{Connector, NodeDescription},
+        workspace::Workspace,
+    },
 };
 
 #[derive(Clone)]
-pub struct HyNodePin {
-    pub name: String,
-    pub color: Color32,
-    pub allow_multiple: bool,
+pub struct HyNode<'a> {
+    pub title: String,
+    pub description: &'a NodeDescription,
+    pub value: HashMap<String, NodeValue>
 }
 
 #[derive(Clone)]
-pub struct HyNode {
-    pub label: String,
-    pub inputs: Vec<HyNodePin>,
-    pub outputs: Vec<HyNodePin>,
-}
-
-#[derive(Clone)]
-pub struct HyNodeProto {
+pub struct HyNodeProto<'a> {
     pub pos: Pos2,
-    pub label: String,
-    pub inputs: Vec<HyNodePin>,
-    pub outputs: Vec<HyNodePin>,
+    pub variant_index: usize,
+    pub workspace: &'a Workspace,
+    pub value: HashMap<String, NodeValue>
 }
 
 #[derive(Default)]
@@ -36,23 +37,32 @@ pub struct HyConnection {
     pub to_connector: usize,
 }
 
-impl HyNode {
-    pub fn draw_content(&mut self, ui: &mut Ui) {
-
-        
-    }
+impl<'a> HyNode<'a> {
+    pub fn draw_content(&mut self, ui: &mut Ui) {}
 }
 
-impl From<HyNodeProto> for HyNode {
-    fn from(value: HyNodeProto) -> Self {
-        Self {
-            label: value.label,
-            inputs: value.inputs,
-            outputs: value.outputs,
-        }
+impl<'a> TryFrom<HyNodeProto<'a>> for HyNode<'a> {
+    type Error = EditorError;
+
+    fn try_from(value: HyNodeProto<'a>) -> Result<Self, Self::Error> {
+        let desc = value
+            .workspace
+            .nodes
+            .get(value.variant_index)
+            .ok_or_else(|| {
+                EditorError::NodeVariantIndexResolve(
+                    value.variant_index,
+                    value.workspace.workspace.workspace_name.clone(),
+                )
+            })?;
+
+        Ok(Self {
+            title: desc.title.to_string(),
+            description: desc,
+        })
     }
 }
-
+/*
 impl From<Connector> for HyNodePin {
     fn from(value: Connector) -> Self {
         Self {
@@ -62,3 +72,4 @@ impl From<Connector> for HyNodePin {
         }
     }
 }
+*/

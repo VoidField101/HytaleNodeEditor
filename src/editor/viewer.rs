@@ -9,7 +9,7 @@ use egui_snarl::{
 use crate::{
     editor::{
         menu::MenuAction,
-        node::{HyNode, HyNodePin},
+        node::{HyNode},
     },
     workspace::workspace::Workspace,
 };
@@ -18,13 +18,13 @@ pub struct HyNodeViewer<'a> {
     pub workspace: &'a Workspace,
 }
 
-impl<'a> SnarlViewer<HyNode> for HyNodeViewer<'a> {
+impl<'a, 'b> SnarlViewer<HyNode<'b>> for HyNodeViewer<'a> {
     fn title(&mut self, node: &HyNode) -> String {
-        node.label.to_owned()
+        node.title.to_owned()
     }
 
     fn inputs(&mut self, node: &HyNode) -> usize {
-        node.inputs.len()
+        node.description.inputs.len()
     }
 
     fn show_node_menu(
@@ -54,7 +54,7 @@ impl<'a> SnarlViewer<HyNode> for HyNodeViewer<'a> {
     }
 
     fn show_graph_menu(&mut self, pos: egui::Pos2, ui: &mut Ui, snarl: &mut Snarl<HyNode>) {
-        match super::menu::draw_default_context(ui, &self.workspace.groups, &self.workspace.nodes) {
+        /*match super::menu::draw_default_context(ui, &self.workspace.groups, &self.workspace.nodes) {
             Some(MenuAction::AddNode(descriptor)) => {
                 snarl.insert_node(
                     pos,
@@ -70,11 +70,12 @@ impl<'a> SnarlViewer<HyNode> for HyNodeViewer<'a> {
                             .iter()
                             .map(|conn| conn.clone().into())
                             .collect::<Vec<_>>(),
+                        description: todo!(),
                     },
                 );
             }
             _ => {}
-        }
+        }*/
     }
 
     #[allow(refining_impl_trait)]
@@ -84,13 +85,13 @@ impl<'a> SnarlViewer<HyNode> for HyNodeViewer<'a> {
         ui: &mut egui::Ui,
         snarl: &mut egui_snarl::Snarl<HyNode>,
     ) -> PinInfo {
-        let pin = &snarl[pin.id.node].inputs[pin.id.input];
-        ui.label(&pin.name);
-        return PinInfo::circle().with_fill(pin.color);
+        let pin = &snarl[pin.id.node].description.inputs[pin.id.input];
+        ui.label(&pin.label);
+        return PinInfo::circle().with_fill(pin.color.into());
     }
 
     fn outputs(&mut self, node: &HyNode) -> usize {
-        node.outputs.len()
+        node.description.outputs.len()
     }
 
     #[allow(refining_impl_trait)]
@@ -100,23 +101,23 @@ impl<'a> SnarlViewer<HyNode> for HyNodeViewer<'a> {
         ui: &mut egui::Ui,
         snarl: &mut egui_snarl::Snarl<HyNode>,
     ) -> PinInfo {
-        let pin = &snarl[pin.id.node].outputs[pin.id.output];
-        if !pin.allow_multiple {
-            ui.label(&pin.name);
+        let pin = &snarl[pin.id.node].description.outputs[pin.id.output];
+        if !pin.multiple {
+            ui.label(&pin.label);
         }
         else {
-            ui.label(RichText::new(&pin.name).italics());
+            ui.label(RichText::new(&pin.label).italics());
         }
 
-        return PinInfo::circle().with_fill(pin.color);
+        return PinInfo::circle().with_fill(pin.color.into());
     }
 
     fn connect(&mut self, from: &OutPin, to: &InPin, snarl: &mut Snarl<HyNode>) {
-        let from_pin = &snarl[from.id.node].outputs[from.id.output];
-        let to_pin = &snarl[to.id.node].inputs[to.id.input];
+        let from_pin = &snarl[from.id.node].description.outputs[from.id.output];
+        let to_pin = &snarl[to.id.node].description.inputs[to.id.input];
 
-        if (to.remotes.is_empty() || to_pin.allow_multiple)
-            && (from.remotes.is_empty() || from_pin.allow_multiple)
+        if (to.remotes.is_empty() || to_pin.multiple)
+            && (from.remotes.is_empty() || from_pin.multiple)
         {
             snarl.connect(from.id, to.id);
         }

@@ -1,4 +1,4 @@
-use std::{env, fs};
+use std::{env, fs, pin::Pin};
 
 use eframe::CreationContext;
 use egui::{CornerRadius, Frame, Id, Margin};
@@ -6,12 +6,10 @@ use egui_snarl::{
     InPinId, NodeId, OutPinId, Snarl,
     ui::{NodeLayout, PinPlacement, SnarlStyle, SnarlWidget},
 };
+use ouroboros::self_referencing;
 
 use crate::{
-    editor::{
-        node::HyNode,
-        viewer::HyNodeViewer,
-    },
+    editor::{node::HyNode, viewer::HyNodeViewer},
     generator::nodes_v1,
     workspace::{load_descriptions, load_workspace, workspace::Workspace},
 };
@@ -20,26 +18,17 @@ use crate::{
 //type MyEditorState =
 //   GraphEditorState<MyNodeData, MyDataType, MyValueType, MyNodeTemplate, MyGraphState>;
 
+#[self_referencing]
 pub struct HyNodeEditor {
     workspace: Workspace,
-    snarl: Snarl<HyNode>,
-    snarl_style: SnarlStyle,
+    #[borrows(workspace)]
+    #[covariant]
+    snarl: Snarl<HyNode<'this>>,
 }
 
 impl HyNodeEditor {
-    pub fn new(cc: &CreationContext) -> Self {
+    pub fn build(cc: &CreationContext) -> Box<Self> {
         egui_extras::install_image_loaders(&cc.egui_ctx);
-
-        cc.egui_ctx.style_mut(|style| style.animation_time *= 10.0);
-
-        let mut snarl = Snarl::new();
-        let style = SnarlStyle {
-            node_layout: Some(NodeLayout::coil()),
-            wire_width: Some(4.0),
-            pin_placement: Some(PinPlacement::Edge),
-
-            ..Default::default()
-        };
 
         let mut path_workspace = env::current_dir().unwrap();
         path_workspace.push("hytale_workspaces");
@@ -59,30 +48,37 @@ impl HyNodeEditor {
         let node = serde_json::from_str::<nodes_v1::RootNode>(&content).unwrap();
         let norm = node.normalize(&workspace, "Biome").expect("Faile");
 
-        let (conn, nodes) = norm.0.to_editor(&workspace);
+        Box::new(HyNodeEditor::new(
+            workspace,
+            |workspace: &Workspace| {
+                let mut snarl = Snarl::new();
 
-        for node in nodes.into_iter() {
-            snarl.insert_node(node.pos, node.into());
-        }
+                let (conn, nodes) = norm.0.to_editor(&workspace);
 
-        for connection in conn.iter() {
-            snarl.connect(
-                OutPinId {
-                    node: NodeId(connection.from_node),
-                    output: connection.from_connector,
-                },
-                InPinId {
-                    node: NodeId(connection.to_node),
-                    input: connection.to_connector,
-                },
-            );
-        }
+                for node in nodes.into_iter() {
+                    snarl.insert_node(
+                        node.pos,
+                        node.try_into()
+                            .expect("A error finializeing the node prototypes occured"),
+                    );
+                }
 
-        Self {
-            workspace: workspace,
-            snarl,
-            snarl_style: style,
-        }
+                for connection in conn.iter() {
+                    snarl.connect(
+                        OutPinId {
+                            node: NodeId(connection.from_node),
+                            output: connection.from_connector,
+                        },
+                        InPinId {
+                            node: NodeId(connection.to_node),
+                            input: connection.to_connector,
+                        },
+                    );
+                }
+
+                snarl
+            }
+        ))
     }
 }
 
@@ -95,8 +91,14 @@ impl eframe::App for HyNodeEditor {
             style.visuals.widgets.noninteractive.corner_radius = CornerRadius::ZERO;
             style.visuals.widgets.open.corner_radius = CornerRadius::ZERO;
             style.visuals.widgets.hovered.corner_radius = CornerRadius::ZERO;
-            style.animation_time *= 0.75;
         });
+
+        let snarl_style = SnarlStyle {
+            node_layout: Some(NodeLayout::coil()),
+            wire_width: Some(4.0),
+            pin_placement: Some(PinPlacement::Edge),
+            ..Default::default()
+        };
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {});
 
@@ -106,16 +108,18 @@ impl eframe::App for HyNodeEditor {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                SnarlWidget::new()
-                    .id(Id::new("snarl-workspace"))
-                    .style(self.snarl_style)
-                    .show(
-                        &mut self.snarl,
-                        &mut HyNodeViewer {
-                            workspace: &self.workspace,
-                        },
-                        ui,
-                    );
+                self.with_mut(|mut_self| {
+                    SnarlWidget::new()
+                        .id(Id::new("snarl-workspace"))
+                        .style(snarl_style)
+                        .show(
+                            mut_self.snarl,
+                            &mut HyNodeViewer {
+                                workspace: &mut_self.workspace,
+                            },
+                            ui,
+                        );
+                })
             });
     }
 }
