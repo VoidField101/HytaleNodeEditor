@@ -55,7 +55,7 @@ pub enum ContentType {
     Int {
         label: String,
         width: Option<u32>,
-        #[serde(deserialize_with="string_quirk_deserializer")]
+        #[serde(deserialize_with="string_quirk_deserializer", default)]
         default: Option<i64>,
         min: Option<i64>,
         max: Option<i64>
@@ -92,6 +92,8 @@ pub struct Content {
 }
 
 
+/// Deserializes to a i64 even if the JSON represents a String
+/// This is requires since some workspace files are apparently misconfigured
 fn string_quirk_deserializer<'de, D>(data: D) -> Result<Option<i64>, D::Error>
 where
 	D: Deserializer<'de>,

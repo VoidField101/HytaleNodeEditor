@@ -20,7 +20,6 @@ pub struct NodeDescription {
     #[serde(default)]
     pub inputs: Vec<Connector>,
     #[serde(default)]
-    #[serde(deserialize_with = "deserialize_struct_case_insensitive")]
     pub schema: HashMap<String, SchemaObject>,
 }
 
