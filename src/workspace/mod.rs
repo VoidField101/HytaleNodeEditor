@@ -9,6 +9,7 @@ pub mod color;
 pub mod nodes;
 pub mod schemas;
 pub mod workspace;
+pub mod content;
 
 #[derive(thiserror::Error, Debug)]
 pub enum WorkspacePaserError {
@@ -79,8 +80,8 @@ mod tests {
         //let entries = fs::read_dir(path).expect("Failed to load descriptions");
         // for entry in entries.flatten() {
 
-        schemas = load_descriptions(&path)?;
-        println!("{:?}", schemas);
+        //schemas = load_descriptions(&path)?;
+        //println!("{:?}", schemas);
 
                 let mut path = env::current_dir().unwrap();
         path.push("hytale_workspaces");
@@ -92,8 +93,9 @@ mod tests {
         schemas.extend(load_descriptions(&path)?);
         println!("{:?}", schemas);
 
-        let types = schemas.iter().map(|schema| &schema.content).flatten().map(|c| c.typ.clone()).collect::<HashSet<_>>();
+         let types = schemas.iter().map(|schema| &schema.content).flatten().map(|c| c.options.clone()).collect::<Vec<_>>();
         
+        //{"SmallString", "Enum", "Integer", "List", "IntSlider", "Bool", "String", "Checkbox", "Int", "Float", "Object"}
         println!("{:?}", types);
 
         Ok(())

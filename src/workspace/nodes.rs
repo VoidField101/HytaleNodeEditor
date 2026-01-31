@@ -4,7 +4,7 @@ use serde::{self, Deserialize, Serialize};
 
 use serde_aux::prelude::*;
 
-use crate::workspace::{color::ColorValue, workspace::Workspace};
+use crate::workspace::{color::ColorValue, content::Content, workspace::Workspace};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
@@ -37,14 +37,6 @@ pub enum SchemaObject {
 pub struct Pin {
     pub node: String,
     pub pin: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "PascalCase")]
-pub struct Content {
-    pub id: String,
-    #[serde(rename = "Type")]
-    pub typ: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
