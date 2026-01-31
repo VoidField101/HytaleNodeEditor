@@ -1,15 +1,16 @@
-use core::f32;
+use core::{f32, prelude::v1};
 use std::collections::HashMap;
 
 use egui::{pos2, vec2};
 use serde::{Deserialize, Serialize};
+use serde_json::{Number, Value};
 
 use crate::{
-    editor::{
-        self,
-        node::{HyConnection, HyNodePin},
+    editor::{self, node::HyConnection},
+    generator::{
+        GeneratorError,
+        common::{Group, NodeId, Position, WorksheetInfo},
     },
-    generator::common::{Group, NodeId, Position, WorksheetInfo},
     workspace::{nodes::NodeDescription, workspace::Workspace},
 };
 
@@ -98,49 +99,56 @@ impl Node {
                 match value.1 {
                     NodeValue::Node(node) => {
                         let node_values = &node.values;
-                        let sub_description =
-                            description.get_variant(workspace, &value.0, |var_key| {
+                        let sub_description = description
+                            .get_variant(workspace, &value.0, |var_key| {
                                 node_values.get(var_key).and_then(|val| match val {
                                     NodeValue::String(value) => Some(value.as_str()),
                                     _ => None,
                                 })
-                            }).ok_or_else(|| super::GeneratorError::NodeVariantResolve(value.0.clone()))?;
+                            })
+                            .ok_or_else(|| {
+                                super::GeneratorError::NodeVariantResolve(value.0.clone())
+                            })?;
 
-                        outputs.insert(
-                            value.0,
-                            vec![node.normalize(
-                                workspace,
-                                sub_description,
-                            )?],
-                        );
+                        outputs.insert(value.0, vec![node.normalize(workspace, sub_description)?]);
                     }
                     NodeValue::List(node_values) => {
                         let mut list = Vec::with_capacity(node_values.len());
                         for elem in node_values.into_iter() {
                             match elem {
                                 NodeValue::Node(node) => {
-                                    let sub_description =
-                                        description.get_variant(workspace, &value.0, |var_key| {
+                                    let sub_description = description
+                                        .get_variant(workspace, &value.0, |var_key| {
                                             node.values.get(var_key).and_then(|val| match val {
                                                 NodeValue::String(value) => Some(value.as_str()),
                                                 _ => None,
                                             })
-                                        }).ok_or_else(|| super::GeneratorError::NodeVariantResolve(value.0.clone()))?;
+                                        })
+                                        .ok_or_else(|| {
+                                            super::GeneratorError::NodeVariantResolve(
+                                                value.0.clone(),
+                                            )
+                                        })?;
 
-                                    list.push(node.normalize(
-                                        workspace,
-                                        sub_description,
-                                    )?);
+                                    list.push(node.normalize(workspace, sub_description)?);
                                 }
                                 _ => {
-                                    return Err(super::GeneratorError::UnexpectedNodeType(value.0, "object".to_owned()).into());
+                                    return Err(super::GeneratorError::UnexpectedNodeType(
+                                        value.0,
+                                        "object".to_owned(),
+                                    )
+                                    .into());
                                 }
                             }
                         }
                         outputs.insert(value.0, list);
                     }
                     _ => {
-                        return Err(super::GeneratorError::UnexpectedNodeType(value.0, "object".to_owned()).into());
+                        return Err(super::GeneratorError::UnexpectedNodeType(
+                            value.0,
+                            "object".to_owned(),
+                        )
+                        .into());
                     }
                 };
             } else {
@@ -163,13 +171,21 @@ impl Node {
                             })
                             .is_some()
                         {
-                            return Err(super::GeneratorError::UnexpectedNodeType(value.0, "any non-object".to_owned()).into());
+                            return Err(super::GeneratorError::UnexpectedNodeType(
+                                value.0,
+                                "any non-object".to_owned(),
+                            )
+                            .into());
                         }
 
                         remaining.insert(value.0, NodeValue::List(list));
                     }
                     _ => {
-                        return Err(super::GeneratorError::UnexpectedNodeType(value.0, "any non-object".to_owned()).into());
+                        return Err(super::GeneratorError::UnexpectedNodeType(
+                            value.0,
+                            "any non-object".to_owned(),
+                        )
+                        .into());
                     }
                 };
             }
@@ -186,11 +202,40 @@ impl Node {
     }
 }
 
+impl TryInto<Value> for NodeValue {
+    type Error = super::GeneratorError;
+
+    fn try_into(self) -> Result<Value, Self::Error> {
+        match self {
+            NodeValue::Node(_) => Err(GeneratorError::UnexpectedNodeType(
+                "string, number, bool".to_string(),
+                "object".to_string(),
+            )),
+            NodeValue::String(v) => Ok(Value::String(v)),
+            NodeValue::Number(v) => {
+                Number::from_f64(v as f64)
+                    .map(Value::Number)
+                    .ok_or_else(|| {
+                        GeneratorError::UnexpectedNodeType(
+                            "number".to_string(),
+                            "unknown".to_string(),
+                        )
+                    })
+            }
+            NodeValue::Bool(v) => Ok(Value::Bool(v)),
+            NodeValue::List(v) => v
+                .into_iter()
+                .map::<Result<Value, Self::Error>, _>(Self::try_into)
+                .collect(),
+        }
+    }
+}
+
 impl NormalizedNode {
-    pub fn to_editor(
+    pub fn to_editor<'a>(
         &self,
-        workspace: &Workspace,
-    ) -> (Vec<HyConnection>, Vec<editor::node::HyNodeProto>) {
+        workspace: &'a Workspace,
+    ) -> (Vec<HyConnection>, Vec<editor::node::HyNodeProto<'a>>) {
         let mut connections = Vec::new();
         let mut nodes = Vec::new();
 
@@ -217,44 +262,31 @@ impl NormalizedNode {
         (connections, nodes)
     }
 
-    fn to_editor_internal(
+    fn to_editor_internal<'a>(
         &self,
         node_map: &HashMap<String, usize>,
-        workspace: &Workspace,
+        workspace: &'a Workspace,
         connections: &mut Vec<HyConnection>,
-        nodes: &mut Vec<editor::node::HyNodeProto>,
+        nodes: &mut Vec<editor::node::HyNodeProto<'a>>,
     ) -> usize {
         // FIXME: Replace unwrap with propper error handling!
         let desc_index = node_map.get(&self.variant).unwrap();
         let desc = &workspace.nodes[*desc_index];
         let new_id = nodes.len();
 
-        let inputs = desc
-            .inputs
+        let values = self
+            .values
             .iter()
-            .enumerate()
-            .map(|(index, conn)| conn.clone().into())
+            .map(|v: (&String, &NodeValue)| {
+                (v.0.clone(), v.1.clone().try_into().unwrap_or(Value::Null))
+            })
             .collect();
-
-        let outputs = desc
-            .outputs
-            .iter()
-            .enumerate()
-            .map(|(index, conn)| conn.clone().into())
-            .collect();
-
-/*let values = desc.content.iter().map(|content|{
-            NyNodeContent {
-                id: content.id,
-                value: 
-            }
-        })*/
 
         nodes.push(editor::node::HyNodeProto {
             pos: pos2(self.position.x as f32, self.position.y as f32),
-            label: desc.title.clone(),
-            inputs: inputs,
-            outputs: outputs,
+            variant_index: *desc_index,
+            workspace,
+            values: values,
         });
 
         self.outputs

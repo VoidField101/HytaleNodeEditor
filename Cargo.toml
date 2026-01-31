@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
+derive-where = "1.6.0"
 eframe = "0.33.3"
 egui = "0.33.3"
 egui-snarl = "0.9.0"

@@ -91,12 +91,34 @@ mod tests {
         // for entry in entries.flatten() {
 
         schemas.extend(load_descriptions(&path)?);
-        println!("{:?}", schemas);
+        println!("{:?}", schemas.iter().find(|schema| schema.id == "Biome"));
 
-         let types = schemas.iter().map(|schema| &schema.content).flatten().map(|c| c.options.clone()).collect::<Vec<_>>();
-        
-        //{"SmallString", "Enum", "Integer", "List", "IntSlider", "Bool", "String", "Checkbox", "Int", "Float", "Object"}
-        println!("{:?}", types);
+        Ok(())
+        //}
+    }
+
+       #[test]
+    pub fn loading_descriptions2() -> anyhow::Result<()> {
+        let mut schemas = Vec::new();
+        let mut path = env::current_dir().unwrap();
+        path.push("hytale_workspaces");
+        path.push("ScriptableBrushes");
+
+        //let entries = fs::read_dir(path).expect("Failed to load descriptions");
+        // for entry in entries.flatten() {
+
+        schemas = load_descriptions(&path)?;
+        //println!("{:?}", schemas);
+
+                let mut path = env::current_dir().unwrap();
+        path.push("hytale_workspaces");
+        path.push("HytaleGenerator Java");
+
+        //let entries = fs::read_dir(path).expect("Failed to load descriptions");
+        // for entry in entries.flatten() {
+
+        schemas.extend(load_descriptions(&path)?);
+        println!("{:?}", schemas);
 
         Ok(())
         //}
