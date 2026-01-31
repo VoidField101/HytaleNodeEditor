@@ -62,7 +62,7 @@ impl HyNodeEditor {
         let (conn, nodes) = norm.0.to_editor(&workspace);
 
         for node in nodes.into_iter() {
-            snarl.insert_node(node.pos, node);
+            snarl.insert_node(node.pos, node.into());
         }
 
         for connection in conn.iter() {

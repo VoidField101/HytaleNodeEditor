@@ -203,7 +203,7 @@ impl NormalizedNode {
     pub fn to_editor(
         &self,
         workspace: &Workspace,
-    ) -> (Vec<HyConnection>, Vec<editor::node::HyNode>) {
+    ) -> (Vec<HyConnection>, Vec<editor::node::HyNodeProto>) {
         let mut connections = Vec::new();
         let mut nodes = Vec::new();
 
@@ -235,7 +235,7 @@ impl NormalizedNode {
         node_map: &HashMap<String, usize>,
         workspace: &Workspace,
         connections: &mut Vec<HyConnection>,
-        nodes: &mut Vec<editor::node::HyNode>,
+        nodes: &mut Vec<editor::node::HyNodeProto>,
     ) -> usize {
         // FIXME: Replace unwrap with propper error handling!
         let desc_index = node_map.get(&self.variant).unwrap();
@@ -264,8 +264,7 @@ impl NormalizedNode {
             })
             .collect();
 
-        nodes.push(editor::node::HyNode {
-            id: new_id,
+        nodes.push(editor::node::HyNodeProto {
             pos: pos2(self.position.x as f32, self.position.y as f32),
             label: desc.title.clone(),
             inputs: inputs,

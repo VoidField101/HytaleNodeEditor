@@ -1,7 +1,6 @@
 use core::f32;
 use std::collections::HashMap;
 
-use anyhow::Error;
 use egui::{pos2, vec2};
 use serde::{Deserialize, Serialize};
 
@@ -105,13 +104,13 @@ impl Node {
                                     NodeValue::String(value) => Some(value.as_str()),
                                     _ => None,
                                 })
-                            });
+                            }).ok_or_else(|| super::GeneratorError::NodeVariantResolve(value.0.clone()))?;
 
                         outputs.insert(
                             value.0,
                             vec![node.normalize(
                                 workspace,
-                                sub_description.expect("UNKOWN Node Variant"),
+                                sub_description,
                             )?],
                         );
                     }
@@ -126,28 +125,22 @@ impl Node {
                                                 NodeValue::String(value) => Some(value.as_str()),
                                                 _ => None,
                                             })
-                                        });
+                                        }).ok_or_else(|| super::GeneratorError::NodeVariantResolve(value.0.clone()))?;
 
                                     list.push(node.normalize(
                                         workspace,
-                                        sub_description.expect("UNKOWN Node Variant"),
+                                        sub_description,
                                     )?);
                                 }
                                 _ => {
-                                    return Err(Error::msg(format!(
-                                        "Key {} contains a non child-node but descriptor requires one",
-                                        value.0
-                                    )));
+                                    return Err(super::GeneratorError::UnexpectedNodeType(value.0, "object".to_owned()).into());
                                 }
                             }
                         }
                         outputs.insert(value.0, list);
                     }
                     _ => {
-                        return Err(Error::msg(format!(
-                            "Key {} is not a child-node but descriptor requires one",
-                            value.0
-                        )));
+                        return Err(super::GeneratorError::UnexpectedNodeType(value.0, "object".to_owned()).into());
                     }
                 };
             } else {
@@ -170,19 +163,13 @@ impl Node {
                             })
                             .is_some()
                         {
-                            return Err(Error::msg(format!(
-                                "Key {} contains a child-node but descriptor doesn't allow that",
-                                value.0
-                            )));
+                            return Err(super::GeneratorError::UnexpectedNodeType(value.0, "any non-object".to_owned()).into());
                         }
 
                         remaining.insert(value.0, NodeValue::List(list));
                     }
                     _ => {
-                        return Err(Error::msg(format!(
-                            "Key {} is a child-node but descriptor doesn't allow that",
-                            value.0
-                        )));
+                        return Err(super::GeneratorError::UnexpectedNodeType(value.0, "any non-object".to_owned()).into());
                     }
                 };
             }
@@ -203,7 +190,7 @@ impl NormalizedNode {
     pub fn to_editor(
         &self,
         workspace: &Workspace,
-    ) -> (Vec<HyConnection>, Vec<editor::node::HyNode>) {
+    ) -> (Vec<HyConnection>, Vec<editor::node::HyNodeProto>) {
         let mut connections = Vec::new();
         let mut nodes = Vec::new();
 
@@ -235,7 +222,7 @@ impl NormalizedNode {
         node_map: &HashMap<String, usize>,
         workspace: &Workspace,
         connections: &mut Vec<HyConnection>,
-        nodes: &mut Vec<editor::node::HyNode>,
+        nodes: &mut Vec<editor::node::HyNodeProto>,
     ) -> usize {
         // FIXME: Replace unwrap with propper error handling!
         let desc_index = node_map.get(&self.variant).unwrap();
@@ -246,26 +233,24 @@ impl NormalizedNode {
             .inputs
             .iter()
             .enumerate()
-            .map(|(index, conn)| HyNodePin {
-                name: conn.label.clone(),
-                color: conn.color.to_egui_color(),
-                allow_multiple: conn.multiple,
-            })
+            .map(|(index, conn)| conn.clone().into())
             .collect();
 
         let outputs = desc
             .outputs
             .iter()
             .enumerate()
-            .map(|(index, conn)| HyNodePin {
-                name: conn.label.clone(),
-                color: conn.color.to_egui_color(),
-                allow_multiple: conn.multiple,
-            })
+            .map(|(index, conn)| conn.clone().into())
             .collect();
 
-        nodes.push(editor::node::HyNode {
-            id: new_id,
+/*let values = desc.content.iter().map(|content|{
+            NyNodeContent {
+                id: content.id,
+                value: 
+            }
+        })*/
+
+        nodes.push(editor::node::HyNodeProto {
             pos: pos2(self.position.x as f32, self.position.y as f32),
             label: desc.title.clone(),
             inputs: inputs,

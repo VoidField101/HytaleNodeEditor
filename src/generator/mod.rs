@@ -1,6 +1,19 @@
+use std::path::PathBuf;
+
 pub mod common;
 pub mod nodes_v1;
-pub mod nodes_v2;
+//pub mod nodes_v2;
+
+#[derive(thiserror::Error, Debug)]
+pub enum GeneratorError {
+    #[error("Failed to read the file {0}: {1}")]
+    ReadError(PathBuf, anyhow::Error),
+    #[error("Node variant not resolved {0}")]
+    NodeVariantResolve(String),
+    #[error("Key {0} has the wrong type expected {1}")]
+    UnexpectedNodeType(String, String),
+}
+
 
 #[cfg(test)]
 mod tests {

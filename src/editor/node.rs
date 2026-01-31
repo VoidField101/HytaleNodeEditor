@@ -1,17 +1,27 @@
+use std::collections::HashMap;
+
 use egui::{Color32, Pos2, Ui};
 
-use crate::editor::{menu::MenuAction, menu::draw_node_context};
+use crate::{
+    workspace::nodes::Connector,
+};
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct HyNodePin {
     pub name: String,
     pub color: Color32,
     pub allow_multiple: bool,
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct HyNode {
-    pub id: usize,
+    pub label: String,
+    pub inputs: Vec<HyNodePin>,
+    pub outputs: Vec<HyNodePin>,
+}
+
+#[derive(Clone)]
+pub struct HyNodeProto {
     pub pos: Pos2,
     pub label: String,
     pub inputs: Vec<HyNodePin>,
@@ -27,40 +37,28 @@ pub struct HyConnection {
 }
 
 impl HyNode {
-    pub fn draw(&mut self, ui: &mut Ui, selected: bool) -> Option<MenuAction<'_>> {
-        let mut action = None;
-        let res = egui::Area::new(egui::Id::new(self.id))
-            .fixed_pos(self.pos)
-            .sense(egui::Sense::click_and_drag())
-            .show(ui.ctx(), |ui| {
-                let mut frame = egui::Frame::window(ui.style());
-                if selected {
-                    frame = frame
-                        .stroke(ui.style().visuals.selection.stroke)
-                        .fill(ui.style().visuals.selection.bg_fill);
-                }
+    pub fn draw_content(&mut self, ui: &mut Ui) {
 
-                frame.show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.style_mut().interaction.selectable_labels = false;
+        
+    }
+}
 
-                        ui.label(&self.label);
-                        // Draw the port shape
-                    });
-                });
-            });
-
-        let drag_resp = res.response;
-        if drag_resp.dragged() {
-            self.pos += drag_resp.drag_delta();
-            // action = Some(Action::SelectNode(self.id));
-        } else if drag_resp.clicked() {
-            // action = Some(Action::SelectNode(self.id));
+impl From<HyNodeProto> for HyNode {
+    fn from(value: HyNodeProto) -> Self {
+        Self {
+            label: value.label,
+            inputs: value.inputs,
+            outputs: value.outputs,
         }
-        drag_resp.context_menu(|ui| {
-            action = draw_node_context(ui, &self);
-        });
+    }
+}
 
-        action
+impl From<Connector> for HyNodePin {
+    fn from(value: Connector) -> Self {
+        Self {
+            name: value.label,
+            color: value.color.into(),
+            allow_multiple: value.multiple,
+        }
     }
 }

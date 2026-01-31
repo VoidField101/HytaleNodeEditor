@@ -1,6 +1,6 @@
 use std::usize;
 
-use egui::Ui;
+use egui::{RichText, Ui};
 use egui_snarl::{
     InPin, NodeId, OutPin, Snarl,
     ui::{PinInfo, SnarlViewer},
@@ -59,26 +59,16 @@ impl<'a> SnarlViewer<HyNode> for HyNodeViewer<'a> {
                 snarl.insert_node(
                     pos,
                     HyNode {
-                        id: 0,
-                        pos,
                         label: descriptor.title.clone(),
                         inputs: descriptor
                             .inputs
                             .iter()
-                            .map(|conn| HyNodePin {
-                                name: conn.label.clone(),
-                                color: conn.color.to_egui_color(),
-                                allow_multiple: conn.multiple,
-                            })
+                            .map(|conn| conn.clone().into())
                             .collect::<Vec<_>>(),
                         outputs: descriptor
                             .outputs
                             .iter()
-                            .map(|conn| HyNodePin {
-                                name: conn.label.clone(),
-                                color: conn.color.to_egui_color(),
-                                allow_multiple: conn.multiple,
-                            })
+                            .map(|conn| conn.clone().into())
                             .collect::<Vec<_>>(),
                     },
                 );
@@ -111,7 +101,13 @@ impl<'a> SnarlViewer<HyNode> for HyNodeViewer<'a> {
         snarl: &mut egui_snarl::Snarl<HyNode>,
     ) -> PinInfo {
         let pin = &snarl[pin.id.node].outputs[pin.id.output];
-        ui.label(&pin.name);
+        if !pin.allow_multiple {
+            ui.label(&pin.name);
+        }
+        else {
+            ui.label(RichText::new(&pin.name).italics());
+        }
+
         return PinInfo::circle().with_fill(pin.color);
     }
 
