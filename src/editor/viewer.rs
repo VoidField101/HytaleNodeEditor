@@ -111,4 +111,21 @@ impl<'a, 'b> SnarlViewer<HyNode<'b>> for HyNodeViewer<'a>
             snarl.connect(from.id, to.id);
         }
     }
+
+    fn has_body(&mut self, node: &HyNode<'b>) -> bool {
+        !node.description.content.is_empty()
+    }
+
+    fn show_body(
+            &mut self,
+            node: NodeId,
+            inputs: &[InPin],
+            outputs: &[OutPin],
+            ui: &mut Ui,
+            snarl: &mut Snarl<HyNode<'b>>,
+        ) {
+        if let Some(node) = snarl.get_node_mut(node) {
+            node.draw_content(ui);
+        }
+    }
 }

@@ -257,7 +257,7 @@ impl NormalizedNode {
 
         nodes
             .iter_mut()
-            .for_each(|node| node.pos = (node.pos - vec2(x_offset, y_offset)) * 0.6);
+            .for_each(|node| node.pos = (node.pos - vec2(x_offset, y_offset)));
 
         (connections, nodes)
     }

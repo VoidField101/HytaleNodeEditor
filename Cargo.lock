@@ -11,6 +11,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui-snarl",
+ "egui-typed-input",
  "egui_extras",
  "env_logger",
  "log",
@@ -1032,6 +1033,16 @@ dependencies = [
  "egui-scale",
  "slab",
  "smallvec",
+]
+
+[[package]]
+name = "egui-typed-input"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b9b0cdc5100f9cf030bb41c7920c9a1c010e191e93f0d69a8099c308cc6e1a7"
+dependencies = [
+ "egui",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
