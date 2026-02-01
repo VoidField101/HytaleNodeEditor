@@ -14,7 +14,6 @@ pub enum GeneratorError {
     UnexpectedNodeType(String, String),
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::{

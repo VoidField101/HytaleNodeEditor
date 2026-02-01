@@ -1,4 +1,4 @@
-use std::{env, fs, pin::Pin};
+use std::{env, fs};
 
 use eframe::CreationContext;
 use egui::{CornerRadius, Frame, Id, Margin};
@@ -48,37 +48,34 @@ impl HyNodeEditor {
         let node = serde_json::from_str::<nodes_v1::RootNode>(&content).unwrap();
         let norm = node.normalize(&workspace, "Biome").expect("Faile");
 
-        Box::new(HyNodeEditor::new(
-            workspace,
-            |workspace: &Workspace| {
-                let mut snarl = Snarl::new();
+        Box::new(HyNodeEditor::new(workspace, |workspace: &Workspace| {
+            let mut snarl = Snarl::new();
 
-                let (conn, nodes) = norm.0.to_editor(&workspace);
+            let (conn, nodes) = norm.0.to_editor(&workspace);
 
-                for node in nodes.into_iter() {
-                    snarl.insert_node(
-                        node.pos,
-                        node.try_into()
-                            .expect("A error finializeing the node prototypes occured"),
-                    );
-                }
-
-                for connection in conn.iter() {
-                    snarl.connect(
-                        OutPinId {
-                            node: NodeId(connection.from_node),
-                            output: connection.from_connector,
-                        },
-                        InPinId {
-                            node: NodeId(connection.to_node),
-                            input: connection.to_connector,
-                        },
-                    );
-                }
-
-                snarl
+            for node in nodes.into_iter() {
+                snarl.insert_node(
+                    node.pos,
+                    node.try_into()
+                        .expect("A error finializeing the node prototypes occured"),
+                );
             }
-        ))
+
+            for connection in conn.iter() {
+                snarl.connect(
+                    OutPinId {
+                        node: NodeId(connection.from_node),
+                        output: connection.from_connector,
+                    },
+                    InPinId {
+                        node: NodeId(connection.to_node),
+                        input: connection.to_connector,
+                    },
+                );
+            }
+
+            snarl
+        }))
     }
 }
 

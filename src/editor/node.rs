@@ -1,20 +1,19 @@
-use std::{
-    collections::{HashMap, btree_map::ValuesMut},
-    i64, num,
-};
+use std::collections::HashMap;
 
 use derive_where::derive_where;
-use eframe::Frame;
-use egui::{Color32, InnerResponse, Pos2, RichText, TextEdit, Ui};
-use egui_typed_input::ValText;
-use serde_json::{Number, Value};
+use egui::emath::*;
+use egui::{Color32, Pos2, RichText, TextEdit, Ui};
+use serde_json::Value;
 
 use crate::{
-    editor::EditorError,
+    editor::{
+        EditorError,
+        value::{NodeEditorValueTypes, ValueFilterAction},
+    },
     workspace::{
         self,
         content::{Content, ContentType},
-        nodes::{Connector, NodeDescription},
+        nodes::NodeDescription,
         workspace::Workspace,
     },
 };
@@ -25,7 +24,7 @@ pub struct HyNode<'a> {
     pub title: String,
     #[derive_where(skip)]
     pub description: &'a NodeDescription,
-    pub values: HashMap<String, (&'a Content, Value)>,
+    pub values: HashMap<String, (&'a Content, NodeEditorValueTypes)>,
 }
 
 #[derive(Clone)]
@@ -35,7 +34,7 @@ pub struct HyNodeProto<'a> {
     pub variant_index: usize,
     #[derive_where(skip)]
     pub workspace: &'a Workspace,
-    pub values: HashMap<String, Value>,
+    pub values: HashMap<String, NodeEditorValueTypes>,
 }
 
 #[derive(Default, Debug)]
@@ -54,7 +53,22 @@ impl<'a> HyNode<'a> {
             values: description
                 .content
                 .iter()
-                .map(|v| (v.id.clone(), (v, v.options.get_default())))
+                .map(|v| {
+                    (
+                        v.id.clone(),
+                        (
+                            v,
+                            NodeEditorValueTypes::from_value(Value::Null, &v.options).ok(),
+                        ),
+                    )
+                })
+                .filter_map(|v| {
+                    if let Some(vt) = v.1.1 {
+                        Some((v.0, (v.1.0, vt)))
+                    } else {
+                        None
+                    }
+                })
                 .collect(),
         }
     }
@@ -78,125 +92,85 @@ impl<'a> HyNode<'a> {
                     }
 
                     match &content_ref.options {
-                        workspace::content::ContentType::SmallString {
-                            label,
-                            default,
-                            width,
-                        } => {
-                            if let Some(val) = value.as_str() {
-                                let mut cloned = val.to_string();
-                                ui.text_edit_singleline(&mut cloned);
+                        workspace::content::ContentType::SmallString { .. } => {
+                            if let NodeEditorValueTypes::String(val) = value {
+                                ui.text_edit_singleline(val);
                             }
                         }
-                        workspace::content::ContentType::Enum {
-                            label,
-                            width,
-                            values,
-                            default,
-                        } => {
+                        workspace::content::ContentType::Enum { .. } => {
                             ui.label(RichText::new("JSON only").underline());
                         }
-                        workspace::content::ContentType::List {
-                            label,
-                            width,
-                            array_element_type,
-                        } => {
+                        workspace::content::ContentType::List { .. } => {
                             ui.label(RichText::new("JSON only").underline());
                         }
                         workspace::content::ContentType::IntSlider {
-                            label,
-                            width,
-                            default,
-                            tick_frequency,
                             min,
                             max,
+                            tick_frequency,
+                            ..
                         } => {
-                            ui.label(RichText::new("JSON only").underline());
+                            if let NodeEditorValueTypes::Integer(val) = value {
+                                ui.add(
+                                    egui::Slider::new(val, *min..=*max)
+                                        .step_by(*tick_frequency as f64),
+                                );
+                            }
                         }
-                        workspace::content::ContentType::String {
-                            label,
-                            width,
-                            height,
-                        } => {
+                        workspace::content::ContentType::String { height, .. } => {
                             ui.set_min_height(*height as f32);
-                            if let Some(val) = value.as_str() {
-                                let mut cloned = val.to_string();
-                                ui.text_edit_multiline(&mut cloned);
+                            if let NodeEditorValueTypes::String(val) = value {
+                                ui.text_edit_multiline(val);
                             }
                         }
                         workspace::content::ContentType::Checkbox { label, .. }
                         | workspace::content::ContentType::Bool { label, .. } => {
-                            if let Some(val) = value.as_bool() {
-                                let mut val2 = val;
-                                ui.checkbox(&mut val2, label);
-
-                                if val2 != val {
-                                    *value = Value::Bool(val2)
-                                }
+                            if let NodeEditorValueTypes::Boolean(val) = value {
+                                ui.checkbox(val, label);
                             }
                         }
-                        workspace::content::ContentType::Int {
-                            label,
-                            width,
-                            default,
-                            min,
-                            max,
-                        } => {
-                            if let Some(val) = value.as_f64().map(|n| n as i64) {
-                                let mut valin = ValText::<i64, _>::number_int();
-                                valin.set_val(val);
-
-                                let mut edit = TextEdit::singleline(&mut valin);
-
-                                if min.unwrap_or(i64::MIN) > val || max.unwrap_or(i64::MAX) < val {
-                                    edit = edit.text_color(Color32::RED);
-                                }
-
-                                edit.show(ui);
-
-                                if let Some(Ok(new_val)) = valin.get_val() {
-                                    if *new_val != val {
-                                        *value = Value::Number(Number::from(*new_val))
-                                    }
-                                }
-                            }
-                        }
-                        workspace::content::ContentType::Float {
-                            label,
-                            width,
-                            default,
-                            min,
-                            max,
-                        } => {
-                            if let Some(val) = value.as_f64() {
-                                let mut valin = ValText::<f64, _>::number();
-                                valin.set_val(val);
-
-                                let mut edit = TextEdit::singleline(&mut valin);
-
-                                if min.unwrap_or(f64::MIN) > val || max.unwrap_or(f64::MAX) < val {
-                                    edit = edit.text_color(Color32::RED);
-                                }
-
-                                edit.show(ui);
-
-                                if let Some(Ok(new_val)) = valin.get_val() {
-                                    if *new_val != val {
-                                        if let Some(new_val) = Number::from_f64(*new_val) {
-                                            *value = Value::Number(new_val);
+                        workspace::content::ContentType::Int { .. } => {
+                            if let NodeEditorValueTypes::IntegerText(val) = value {
+                                let valid = val.is_valid() && val.is_matching();
+                                val.with_content_mut(
+                                    |txt| {
+                                        let mut edit = TextEdit::singleline(txt);
+                                        if !valid {
+                                            edit = edit.text_color(Color32::RED);
                                         }
-                                        else {
-                                    println!("HI2")
-                                }
-                                    }
-                                }
-                                else {
-                                    println!("HI")
-                                }
-                                
+                                        edit.show(ui);
+                                    },
+                                    |_prev, next, res| {
+                                        if next.contains('.') || !res.is_some() {
+                                            ValueFilterAction::InvalidReset
+                                        } else {
+                                            ValueFilterAction::Valid
+                                        }
+                                    },
+                                );
                             }
                         }
-                        workspace::content::ContentType::Object { label, fields } => {
+                        workspace::content::ContentType::Float { .. } => {
+                            if let NodeEditorValueTypes::FloatText(val) = value {
+                                let valid = val.is_valid() && val.is_matching();
+                                val.with_content_mut(
+                                    |txt| {
+                                        let mut edit = TextEdit::singleline(txt);
+                                        if !valid {
+                                            edit = edit.text_color(Color32::RED);
+                                        }
+                                        edit.show(ui);
+                                    },
+                                    |_prev, _next, res| {
+                                        if !res.is_some() {
+                                            ValueFilterAction::InvalidReset
+                                        } else {
+                                            ValueFilterAction::Valid
+                                        }
+                                    },
+                                );
+                            }
+                        }
+                        workspace::content::ContentType::Object { .. } => {
                             ui.label(RichText::new("JSON only").underline());
                         }
                     }
@@ -230,12 +204,14 @@ impl<'a> TryFrom<HyNodeProto<'a>> for HyNode<'a> {
                     value
                         .values
                         .remove(&content.id)
-                        .or_else(|| {
-                            let dv = content.options.get_default();
-                            if dv.is_null() { None } else { Some(dv) }
-                        })
                         .map(|v| (content, v))
-                        .unwrap_or((content, Value::Null)),
+                        .unwrap_or_else(|| {
+                            (
+                                content,
+                                NodeEditorValueTypes::from_value(Value::Null, &content.options)
+                                    .unwrap(),
+                            )
+                        }),
                 )
             })
             .collect::<HashMap<_, _>>();

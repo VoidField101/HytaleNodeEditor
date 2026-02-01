@@ -7,10 +7,7 @@ use egui_snarl::{
 };
 
 use crate::{
-    editor::{
-        menu::MenuAction,
-        node::{HyNode},
-    },
+    editor::{menu::MenuAction, node::HyNode},
     workspace::workspace::Workspace,
 };
 
@@ -19,7 +16,8 @@ pub struct HyNodeViewer<'a> {
 }
 
 impl<'a, 'b> SnarlViewer<HyNode<'b>> for HyNodeViewer<'a>
-    where 'a: 'b
+where
+    'a: 'b,
 {
     fn title(&mut self, node: &HyNode) -> String {
         node.title.to_owned()
@@ -58,10 +56,7 @@ impl<'a, 'b> SnarlViewer<HyNode<'b>> for HyNodeViewer<'a>
     fn show_graph_menu(&mut self, pos: egui::Pos2, ui: &mut Ui, snarl: &mut Snarl<HyNode<'b>>) {
         match super::menu::draw_default_context(ui, &self.workspace.groups, &self.workspace.nodes) {
             Some(MenuAction::AddNode(descriptor)) => {
-                snarl.insert_node(
-                    pos,
-                    HyNode::new(descriptor),
-                );
+                snarl.insert_node(pos, HyNode::new(descriptor));
             }
             _ => {}
         }
@@ -93,8 +88,7 @@ impl<'a, 'b> SnarlViewer<HyNode<'b>> for HyNodeViewer<'a>
         let pin = &snarl[pin.id.node].description.outputs[pin.id.output];
         if !pin.multiple {
             ui.label(&pin.label);
-        }
-        else {
+        } else {
             ui.label(RichText::new(&pin.label).italics());
         }
 
@@ -117,13 +111,13 @@ impl<'a, 'b> SnarlViewer<HyNode<'b>> for HyNodeViewer<'a>
     }
 
     fn show_body(
-            &mut self,
-            node: NodeId,
-            inputs: &[InPin],
-            outputs: &[OutPin],
-            ui: &mut Ui,
-            snarl: &mut Snarl<HyNode<'b>>,
-        ) {
+        &mut self,
+        node: NodeId,
+        inputs: &[InPin],
+        outputs: &[OutPin],
+        ui: &mut Ui,
+        snarl: &mut Snarl<HyNode<'b>>,
+    ) {
         if let Some(node) = snarl.get_node_mut(node) {
             node.draw_content(ui);
         }

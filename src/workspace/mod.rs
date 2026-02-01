@@ -6,10 +6,10 @@ use std::{
 };
 
 pub mod color;
+pub mod content;
 pub mod nodes;
 pub mod schemas;
 pub mod workspace;
-pub mod content;
 
 #[derive(thiserror::Error, Debug)]
 pub enum WorkspacePaserError {
@@ -47,7 +47,6 @@ fn load_descriptions_recurse(
     Ok(())
 }
 
-
 pub fn load_workspace(path: &Path) -> io::Result<WorkspaceSchema> {
     let mut ws_path = path.to_path_buf();
     ws_path.push("_Workspace.json");
@@ -83,7 +82,7 @@ mod tests {
         //schemas = load_descriptions(&path)?;
         //println!("{:?}", schemas);
 
-                let mut path = env::current_dir().unwrap();
+        let mut path = env::current_dir().unwrap();
         path.push("hytale_workspaces");
         path.push("HytaleGenerator Java");
 
@@ -97,7 +96,7 @@ mod tests {
         //}
     }
 
-       #[test]
+    #[test]
     pub fn loading_descriptions2() -> anyhow::Result<()> {
         let mut schemas = Vec::new();
         let mut path = env::current_dir().unwrap();
@@ -110,7 +109,7 @@ mod tests {
         schemas = load_descriptions(&path)?;
         //println!("{:?}", schemas);
 
-                let mut path = env::current_dir().unwrap();
+        let mut path = env::current_dir().unwrap();
         path.push("hytale_workspaces");
         path.push("HytaleGenerator Java");
 

@@ -2,24 +2,30 @@ pub mod menu;
 pub mod node;
 pub mod striped_button;
 
+pub mod value;
 pub mod viewer;
-
 
 #[derive(thiserror::Error, Debug)]
 pub enum EditorError {
     #[error("Node variant not resolved {0} @ '{1}'")]
     NodeVariantIndexResolve(usize, String),
+    #[error("Numeric value from JSON can't be converted {0}")]
+    NumericValueNotParsable(serde_json::Number),
+    #[error("Unexpected datatype {0} .. Expected: {1}")]
+    UnexpectedDatatype(String, String),
 }
 
 #[cfg(test)]
-mod test{
+mod test {
     use std::{env, fs};
 
-    use crate::{generator::nodes_v1, workspace::{load_descriptions, load_workspace, workspace::Workspace}};
-
+    use crate::{
+        generator::nodes_v1,
+        workspace::{load_descriptions, load_workspace, workspace::Workspace},
+    };
 
     #[test]
-    fn test_basic_to_editor(){
+    fn test_basic_to_editor() {
         let mut path_workspace = env::current_dir().unwrap();
         path_workspace.push("hytale_workspaces");
         path_workspace.push("HytaleGenerator Java");

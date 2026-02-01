@@ -1,4 +1,4 @@
-use core::{f32, prelude::v1};
+use core::f32;
 use std::collections::HashMap;
 
 use egui::{pos2, vec2};
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 
 use crate::{
-    editor::{self, node::HyConnection},
+    editor::{self, node::HyConnection, value::NodeEditorValueTypes},
     generator::{
         GeneratorError,
         common::{Group, NodeId, Position, WorksheetInfo},
@@ -14,6 +14,8 @@ use crate::{
     workspace::{nodes::NodeDescription, workspace::Workspace},
 };
 
+// FIXME: This type is problematic. It assumes (during deserialization) that every object could be a node.
+// In reality we want to check the Workspace file for that. A 2-step deserialization is required
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum NodeValue {
@@ -257,7 +259,7 @@ impl NormalizedNode {
 
         nodes
             .iter_mut()
-            .for_each(|node| node.pos = (node.pos - vec2(x_offset, y_offset)));
+            .for_each(|node| node.pos = node.pos - vec2(x_offset, y_offset));
 
         (connections, nodes)
     }
@@ -277,8 +279,14 @@ impl NormalizedNode {
         let values = self
             .values
             .iter()
-            .map(|v: (&String, &NodeValue)| {
-                (v.0.clone(), v.1.clone().try_into().unwrap_or(Value::Null))
+            .filter_map(|v: (&String, &NodeValue)| {
+                desc.content.iter().find(|c| c.id == *v.0).map(|content| {
+                    (
+                        v.0.clone(),
+                        NodeEditorValueTypes::from_nodevalue(Some(v.1.clone()), &content.options)
+                            .unwrap(),
+                    )
+                })
             })
             .collect();
 

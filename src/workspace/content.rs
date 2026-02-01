@@ -75,6 +75,18 @@ pub enum ContentType {
     },
 }
 
+/// Just a helper type since the existing content types are more verbose than what we need for simple casts
+#[derive(Debug, Copy, Clone)]
+pub enum ValueType {
+    Boolean,
+    Float,
+    Int,
+    Object,
+    String,
+    List,
+    Enum,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct ContentObjectFields {
@@ -108,125 +120,46 @@ where
 }
 
 impl ContentType {
-    pub fn get_default(&self) -> Value {
+    pub fn get_default(&self) -> (Value, ValueType) {
         let val = match self {
-            ContentType::SmallString {
-                label: _,
-                default,
-                width: _,
-            } => default.clone().map(Value::from),
-            ContentType::Enum {
-                label: _,
-                width: _,
-                values: _,
-                default,
-            } => default.clone().map(Value::from),
-            ContentType::List {
-                label: _,
-                width: _,
-                array_element_type: _,
-            } => None,
-            ContentType::IntSlider {
-                label: _,
-                width: _,
-                default,
-                tick_frequency: _,
-                min: _,
-                max: _,
-            } => default.clone().map(Value::from),
-            ContentType::Bool {
-                label: _,
-                width: _,
-                default_value,
-            } => default_value.clone().map(Value::from),
-            ContentType::String {
-                label: _,
-                width: _,
-                height: _,
-            } => None,
-            ContentType::Checkbox {
-                label: _,
-                width: _,
-                default,
-            } => default.clone().map(Value::from),
-            ContentType::Int {
-                label: _,
-                width: _,
-                default,
-                min: _,
-                max: _,
-            } => default.clone().map(Value::from),
-            ContentType::Float {
-                label: _,
-                width: _,
-                default,
-                min: _,
-                max: _,
-            } => default.clone().map(Value::from),
-            ContentType::Object {
-                label: _,
-                fields: _,
-            } => None,
+            ContentType::SmallString { default, .. } => {
+                (default.clone().map(Value::from), ValueType::String)
+            }
+            ContentType::Enum { default, .. } => {
+                (default.clone().map(Value::from), ValueType::Enum)
+            }
+            ContentType::List { .. } => (None, ValueType::List),
+            ContentType::IntSlider { default, .. } => {
+                (default.clone().map(Value::from), ValueType::Int)
+            }
+            ContentType::Bool { default_value, .. } => {
+                (default_value.clone().map(Value::from), ValueType::Boolean)
+            }
+            ContentType::String { .. } => (None, ValueType::String),
+            ContentType::Checkbox { default, .. } => {
+                (default.clone().map(Value::from), ValueType::Boolean)
+            }
+            ContentType::Int { default, .. } => (default.clone().map(Value::from), ValueType::Int),
+            ContentType::Float { default, .. } => {
+                (default.clone().map(Value::from), ValueType::Float)
+            }
+            ContentType::Object { .. } => (None, ValueType::Object),
         };
 
-        val.unwrap_or(Value::Null)
+        (val.0.unwrap_or(Value::Null), val.1)
     }
 
     pub fn get_common(&self) -> (&str, Option<u32>) {
         let (label, width) = match self {
-            ContentType::SmallString {
-                label,
-                default: _,
-                width,
-            } => (label, *width),
-            ContentType::Enum {
-                label,
-                width,
-                values: _,
-                default: _,
-            } => (label, *width),
-            ContentType::List {
-                label,
-                width,
-                array_element_type: _,
-            } => (label, *width),
-            ContentType::IntSlider {
-                label,
-                width,
-                default: _,
-                tick_frequency: _,
-                min: _,
-                max: _,
-            } => (label, *width),
-            ContentType::Bool {
-                label,
-                width,
-                default_value: _,
-            } => (label, *width),
-            ContentType::String {
-                label,
-                width,
-                height: _,
-            } => (label, Some(*width)),
-            ContentType::Checkbox {
-                label,
-                width,
-                default: _,
-            } => (label, *width),
-            ContentType::Int {
-                label,
-                width,
-                default: _,
-                min: _,
-                max: _,
-            } => (label, *width),
-            ContentType::Float {
-                label,
-                width,
-                default: _,
-                min: _,
-                max: _,
-            } => (label, *width),
+            ContentType::SmallString { label, width, .. } => (label, *width),
+            ContentType::Enum { label, width, .. } => (label, *width),
+            ContentType::List { label, width, .. } => (label, *width),
+            ContentType::IntSlider { label, width, .. } => (label, *width),
+            ContentType::Bool { label, width, .. } => (label, *width),
+            ContentType::String { label, width, .. } => (label, Some(*width)),
+            ContentType::Checkbox { label, width, .. } => (label, *width),
+            ContentType::Int { label, width, .. } => (label, *width),
+            ContentType::Float { label, width, .. } => (label, *width),
             ContentType::Object { label, fields: _ } => (label, None),
         };
 
