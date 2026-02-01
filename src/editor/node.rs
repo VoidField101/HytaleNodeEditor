@@ -24,7 +24,7 @@ pub struct HyNode<'a> {
     pub title: String,
     #[derive_where(skip)]
     pub description: &'a NodeDescription,
-    pub values: HashMap<String, (&'a Content, NodeEditorValueTypes)>,
+    pub values: Vec<(&'a Content, NodeEditorValueTypes)>,
 }
 
 #[derive(Clone)]
@@ -55,16 +55,13 @@ impl<'a> HyNode<'a> {
                 .iter()
                 .map(|v| {
                     (
-                        v.id.clone(),
-                        (
-                            v,
-                            NodeEditorValueTypes::from_value(Value::Null, &v.options).ok(),
-                        ),
+                        v,
+                        NodeEditorValueTypes::from_value(Value::Null, &v.options).ok(),
                     )
                 })
                 .filter_map(|v| {
-                    if let Some(vt) = v.1.1 {
-                        Some((v.0, (v.1.0, vt)))
+                    if let Some(vt) = v.1 {
+                        Some((v.0, vt))
                     } else {
                         None
                     }
@@ -77,7 +74,7 @@ impl<'a> HyNode<'a> {
         egui::containers::Frame::group(ui.style()).show(ui, |ui| {
             ui.vertical(|ui| {
                 for content in self.values.iter_mut() {
-                    let (content_id, (content_ref, value)) = content;
+                    let (content_ref, value) = content;
                     let common = content_ref.options.get_common();
                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
                     if let Some(width) = common.1 {
@@ -199,22 +196,19 @@ impl<'a> TryFrom<HyNodeProto<'a>> for HyNode<'a> {
             .content
             .iter()
             .map(|content| {
-                (
-                    content.id.clone(),
-                    value
-                        .values
-                        .remove(&content.id)
-                        .map(|v| (content, v))
-                        .unwrap_or_else(|| {
-                            (
-                                content,
-                                NodeEditorValueTypes::from_value(Value::Null, &content.options)
-                                    .unwrap(),
-                            )
-                        }),
-                )
+                value
+                    .values
+                    .remove(&content.id)
+                    .map(|v| (content, v))
+                    .unwrap_or_else(|| {
+                        (
+                            content,
+                            NodeEditorValueTypes::from_value(Value::Null, &content.options)
+                                .unwrap(),
+                        )
+                    })
             })
-            .collect::<HashMap<_, _>>();
+            .collect::<Vec<_>>();
 
         Ok(Self {
             title: desc.title.to_string(),

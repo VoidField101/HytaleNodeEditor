@@ -276,6 +276,8 @@ impl NormalizedNode {
         let desc = &workspace.nodes[*desc_index];
         let new_id = nodes.len();
 
+        // FIXME: Along with using the broken NodeValue type it also looses the desc.content ordering due to the hash map which is randomized every time
+       
         let values = self
             .values
             .iter()

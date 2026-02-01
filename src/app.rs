@@ -14,10 +14,6 @@ use crate::{
     workspace::{load_descriptions, load_workspace, workspace::Workspace},
 };
 
-//type MyGraph = Graph<MyNodeData, MyDataType, MyValueType>;
-//type MyEditorState =
-//   GraphEditorState<MyNodeData, MyDataType, MyValueType, MyNodeTemplate, MyGraphState>;
-
 #[self_referencing]
 pub struct HyNodeEditor {
     workspace: Workspace,
