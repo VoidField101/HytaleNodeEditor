@@ -2,7 +2,7 @@ use std::{fmt::Debug, str::FromStr};
 
 use crate::{
     editor::EditorError,
-    generator::nodes_v1::{JsonValue, NodeValue},
+    generator::nodes_v1::{JsonValue},
     workspace::content::{ContentType, ValueType},
 };
 

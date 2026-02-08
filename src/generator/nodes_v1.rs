@@ -16,14 +16,6 @@ use crate::{
 pub type JsonValue = serde_json::Value;
 pub type JsonNumber = serde_json::Number;
 
-// FIXME: Apparently this Value isn't needed anymore
-#[derive(Debug, Serialize, Clone)]
-#[serde(untagged)]
-pub enum NodeValue {
-    Node(Box<Node>),
-    Value(JsonValue),
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde_with::skip_serializing_none]
 pub struct Node {
@@ -58,7 +50,7 @@ pub struct NormalizedNode {
     pub comment: Option<String>,
     pub node_id: Option<NodeId>,
     pub variant: String,
-    pub values: HashMap<String, NodeValue>,
+    pub values: HashMap<String, JsonValue>,
     pub outputs: HashMap<String, Vec<NormalizedNode>>,
 }
 
@@ -142,7 +134,7 @@ impl Node {
                     }
                 };
             } else {
-                remaining.insert(value.0, NodeValue::Value(value.1));
+                remaining.insert(value.0, value.1);
             }
         }
 
@@ -154,20 +146,6 @@ impl Node {
             values: remaining,
             outputs: outputs,
         })
-    }
-}
-
-impl TryInto<JsonValue> for NodeValue {
-    type Error = super::GeneratorError;
-
-    fn try_into(self) -> Result<JsonValue, Self::Error> {
-        match self {
-            NodeValue::Node(_) => Err(GeneratorError::UnexpectedNodeType(
-                "string, number, bool".to_string(),
-                "object".to_string(),
-            )),
-            NodeValue::Value(v) => Ok(v),
-        }
     }
 }
 
@@ -214,22 +192,21 @@ impl NormalizedNode {
         let desc = &workspace.nodes[*desc_index];
         let new_id = nodes.len();
 
-        
-        let values = self
-            .values
+        let values = desc
+            .content
             .iter()
-            .filter_map(|v: (&String, &NodeValue)| {
-                // FIXME: Is there a better way to find the correct mapping?
-                desc.content.iter().find(|c| c.id == *v.0).map(|content| {
-                    (
-                        v.0.clone(),
-                        NodeEditorValueTypes::from_value(
-                            v.1.clone().try_into().unwrap(),
-                            &content.options,
-                        )
-                        .unwrap(),
+            .map(|content| {
+                (
+                    content.id.clone(),
+                    NodeEditorValueTypes::from_value(
+                        self.values
+                            .get(&content.id)
+                            .map(Clone::clone)
+                            .unwrap_or(content.options.get_default().0),
+                        &content.options,
                     )
-                })
+                    .unwrap(),
+                )
             })
             .collect();
 
