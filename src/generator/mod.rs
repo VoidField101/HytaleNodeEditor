@@ -1,8 +1,12 @@
 use std::path::PathBuf;
 
 pub mod common;
+pub mod norm;
 pub mod nodes_v1;
-//pub mod nodes_v2;
+pub mod nodes_v2;
+
+pub type JsonValue = serde_json::Value;
+pub type JsonNumber = serde_json::Number;
 
 #[derive(thiserror::Error, Debug)]
 pub enum GeneratorError {
@@ -17,7 +21,7 @@ pub enum GeneratorError {
 #[cfg(test)]
 mod tests {
     use crate::{
-        generator::nodes_v1,
+        generator::{nodes_v1, nodes_v2},
         workspace::{load_descriptions, load_workspace, workspace::Workspace},
     };
     use std::{env, fs};
@@ -32,7 +36,7 @@ mod tests {
         path.push("Volcanic1_Shore.json");
 
         let content = fs::read_to_string(path).expect("Could not read file");
-        let node = serde_json::from_str::<nodes_v1::RootNode>(&content).unwrap();
+        let node = serde_json::from_str::<nodes_v2::RootNode>(&content).unwrap();
         println!("{:?}", node);
     }
 

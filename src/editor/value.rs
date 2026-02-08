@@ -1,9 +1,7 @@
 use std::{fmt::Debug, str::FromStr};
 
 use crate::{
-    editor::EditorError,
-    generator::nodes_v1::{JsonValue},
-    workspace::content::{ContentType, ValueType},
+    editor::EditorError, generator::JsonValue, workspace::content::{ContentType, ValueType}
 };
 
 #[derive(Clone, Debug, PartialEq, Default)]

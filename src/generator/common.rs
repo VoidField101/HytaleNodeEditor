@@ -1,7 +1,12 @@
+use std::collections::HashMap;
+
+use egui::pos2;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+use crate::editor::{self, value::NodeEditorValueTypes};
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct Position {
     #[serde(rename = "$x")]
     pub x: i32,
@@ -39,6 +44,8 @@ pub struct WorksheetInfo {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct NodeId(pub String);
 
+
+
 impl Default for Position {
     fn default() -> Self {
         Self { x: 0, y: 0 }
@@ -56,4 +63,9 @@ impl NodeId {
     pub fn from_parts(name: &str, uuid: &Uuid) -> Self {
         Self(format!("{}-{}", name, uuid.as_hyphenated().to_string()))
     }
+
+     pub fn new_rand(name: &str) -> Self {
+        Self::from_parts(name, &Uuid::new_v4())
+    }
 }
+
