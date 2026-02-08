@@ -3,7 +3,6 @@ use std::collections::HashMap;
 
 use egui::{pos2, vec2};
 use serde::{Deserialize, Serialize};
-use serde_json::{Number, Value};
 
 use crate::{
     editor::{self, node::HyConnection, value::NodeEditorValueTypes},
@@ -14,16 +13,15 @@ use crate::{
     workspace::{nodes::NodeDescription, workspace::Workspace},
 };
 
-// FIXME: This type is problematic. It assumes (during deserialization) that every object could be a node.
-// In reality we want to check the Workspace file for that. A 2-step deserialization is required
-#[derive(Debug, Serialize, Deserialize, Clone)]
+pub type JsonValue = serde_json::Value;
+pub type JsonNumber = serde_json::Number;
+
+// FIXME: Apparently this Value isn't needed anymore
+#[derive(Debug, Serialize, Clone)]
 #[serde(untagged)]
 pub enum NodeValue {
     Node(Box<Node>),
-    String(String),
-    Number(f32),
-    Bool(bool),
-    List(Vec<NodeValue>),
+    Value(JsonValue),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,7 +37,7 @@ pub struct Node {
     pub node_id: Option<NodeId>,
 
     #[serde(flatten)]
-    pub values: HashMap<String, NodeValue>,
+    pub values: HashMap<String, JsonValue>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -99,12 +97,13 @@ impl Node {
         for value in self.values.into_iter() {
             if let Some(_pin) = description.get_pin(&value.0) {
                 match value.1 {
-                    NodeValue::Node(node) => {
-                        let node_values = &node.values;
+                    obj @ JsonValue::Object(_) => {
+                        let node = serde_json::from_value::<Node>(obj)?;
+                        let node_values: &_ = &node.values;
                         let sub_description = description
                             .get_variant(workspace, &value.0, |var_key| {
                                 node_values.get(var_key).and_then(|val| match val {
-                                    NodeValue::String(value) => Some(value.as_str()),
+                                    JsonValue::String(value) => Some(value.as_str()),
                                     _ => None,
                                 })
                             })
@@ -114,34 +113,23 @@ impl Node {
 
                         outputs.insert(value.0, vec![node.normalize(workspace, sub_description)?]);
                     }
-                    NodeValue::List(node_values) => {
-                        let mut list = Vec::with_capacity(node_values.len());
-                        for elem in node_values.into_iter() {
-                            match elem {
-                                NodeValue::Node(node) => {
-                                    let sub_description = description
-                                        .get_variant(workspace, &value.0, |var_key| {
-                                            node.values.get(var_key).and_then(|val| match val {
-                                                NodeValue::String(value) => Some(value.as_str()),
-                                                _ => None,
-                                            })
-                                        })
-                                        .ok_or_else(|| {
-                                            super::GeneratorError::NodeVariantResolve(
-                                                value.0.clone(),
-                                            )
-                                        })?;
+                    JsonValue::Array(values) => {
+                        let mut list = Vec::with_capacity(values.len());
+                        for obj in values.into_iter() {
+                            let node = serde_json::from_value::<Node>(obj)?;
+                            let node_values: &_ = &node.values;
+                            let sub_description = description
+                                .get_variant(workspace, &value.0, |var_key| {
+                                    node_values.get(var_key).and_then(|val| match val {
+                                        JsonValue::String(value) => Some(value.as_str()),
+                                        _ => None,
+                                    })
+                                })
+                                .ok_or_else(|| {
+                                    super::GeneratorError::NodeVariantResolve(value.0.clone())
+                                })?;
 
-                                    list.push(node.normalize(workspace, sub_description)?);
-                                }
-                                _ => {
-                                    return Err(super::GeneratorError::UnexpectedNodeType(
-                                        value.0,
-                                        "object".to_owned(),
-                                    )
-                                    .into());
-                                }
-                            }
+                            list.push(node.normalize(workspace, sub_description)?);
                         }
                         outputs.insert(value.0, list);
                     }
@@ -154,42 +142,7 @@ impl Node {
                     }
                 };
             } else {
-                match value.1 {
-                    val @ NodeValue::String(_) => {
-                        remaining.insert(value.0, val);
-                    }
-                    val @ NodeValue::Number(_) => {
-                        remaining.insert(value.0, val);
-                    }
-                    val @ NodeValue::Bool(_) => {
-                        remaining.insert(value.0, val);
-                    }
-                    NodeValue::List(list) => {
-                        if list
-                            .iter()
-                            .find(|elem| match elem {
-                                NodeValue::Node(node) => true,
-                                _ => false,
-                            })
-                            .is_some()
-                        {
-                            return Err(super::GeneratorError::UnexpectedNodeType(
-                                value.0,
-                                "any non-object".to_owned(),
-                            )
-                            .into());
-                        }
-
-                        remaining.insert(value.0, NodeValue::List(list));
-                    }
-                    _ => {
-                        return Err(super::GeneratorError::UnexpectedNodeType(
-                            value.0,
-                            "any non-object".to_owned(),
-                        )
-                        .into());
-                    }
-                };
+                remaining.insert(value.0, NodeValue::Value(value.1));
             }
         }
 
@@ -204,31 +157,16 @@ impl Node {
     }
 }
 
-impl TryInto<Value> for NodeValue {
+impl TryInto<JsonValue> for NodeValue {
     type Error = super::GeneratorError;
 
-    fn try_into(self) -> Result<Value, Self::Error> {
+    fn try_into(self) -> Result<JsonValue, Self::Error> {
         match self {
             NodeValue::Node(_) => Err(GeneratorError::UnexpectedNodeType(
                 "string, number, bool".to_string(),
                 "object".to_string(),
             )),
-            NodeValue::String(v) => Ok(Value::String(v)),
-            NodeValue::Number(v) => {
-                Number::from_f64(v as f64)
-                    .map(Value::Number)
-                    .ok_or_else(|| {
-                        GeneratorError::UnexpectedNodeType(
-                            "number".to_string(),
-                            "unknown".to_string(),
-                        )
-                    })
-            }
-            NodeValue::Bool(v) => Ok(Value::Bool(v)),
-            NodeValue::List(v) => v
-                .into_iter()
-                .map::<Result<Value, Self::Error>, _>(Self::try_into)
-                .collect(),
+            NodeValue::Value(v) => Ok(v),
         }
     }
 }
@@ -276,17 +214,20 @@ impl NormalizedNode {
         let desc = &workspace.nodes[*desc_index];
         let new_id = nodes.len();
 
-        // FIXME: Along with using the broken NodeValue type it also looses the desc.content ordering due to the hash map which is randomized every time
-       
+        
         let values = self
             .values
             .iter()
             .filter_map(|v: (&String, &NodeValue)| {
+                // FIXME: Is there a better way to find the correct mapping?
                 desc.content.iter().find(|c| c.id == *v.0).map(|content| {
                     (
                         v.0.clone(),
-                        NodeEditorValueTypes::from_nodevalue(Some(v.1.clone()), &content.options)
-                            .unwrap(),
+                        NodeEditorValueTypes::from_value(
+                            v.1.clone().try_into().unwrap(),
+                            &content.options,
+                        )
+                        .unwrap(),
                     )
                 })
             })

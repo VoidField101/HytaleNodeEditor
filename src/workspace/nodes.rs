@@ -28,12 +28,12 @@ pub struct NodeDescription {
 pub enum SchemaObject {
     ConstString(String),
     #[serde(deserialize_with = "deserialize_struct_case_insensitive")]
-    Pin(Pin),
+    Pin(NodePin),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all(serialize = "PascalCase"))]
-pub struct Pin {
+pub struct NodePin {
     pub node: String,
     pub pin: String,
 }
@@ -77,7 +77,7 @@ impl NodeDescription {
         }
     }
 
-    pub fn get_pin<'a>(&'a self, key: &str) -> Option<&'a Pin> {
+    pub fn get_pin<'a>(&'a self, key: &str) -> Option<&'a NodePin> {
         if let Some(SchemaObject::Pin(pin)) = self.schema.get(key) {
             Some(pin)
         } else {

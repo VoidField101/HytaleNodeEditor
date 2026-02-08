@@ -2,7 +2,7 @@ use std::{fmt::Debug, str::FromStr};
 
 use crate::{
     editor::EditorError,
-    generator::nodes_v1::NodeValue,
+    generator::nodes_v1::{JsonValue, NodeValue},
     workspace::content::{ContentType, ValueType},
 };
 
@@ -39,7 +39,7 @@ pub enum ValueFilterAction {
 }
 
 impl NodeEditorValueTypes {
-    pub fn from_value(value: serde_json::Value, typ: &ContentType) -> Result<Self, EditorError> {
+    pub fn from_value(value: JsonValue, typ: &ContentType) -> Result<Self, EditorError> {
         let (default, real_type) = typ.get_default();
         Ok(match real_type {
             ValueType::Boolean => NodeEditorValueTypes::Boolean(
@@ -93,72 +93,6 @@ impl NodeEditorValueTypes {
             ),
             ValueType::List => NodeEditorValueTypes::Other(value),
             ValueType::Enum => NodeEditorValueTypes::Other(value),
-        })
-    }
-
-    // FIXME: Due to issues with NodeValue, this one should be replaces with the raw serde_json Value
-    pub fn from_nodevalue(
-        value: Option<NodeValue>,
-        typ: &ContentType,
-    ) -> Result<Self, EditorError> {
-        let (default, real_type) = typ.get_default();
-        Ok(match real_type {
-            ValueType::Boolean => {
-                NodeEditorValueTypes::Boolean(if let Some(NodeValue::Bool(v)) = value {
-                    v
-                } else {
-                    default.as_bool().unwrap_or(value.is_none())
-                })
-            }
-            ValueType::Float => {
-                if let ContentType::Float { min, max, .. } = typ {
-                    NodeEditorValueTypes::FloatText(NodeNumericEditing::new(
-                        if let Some(NodeValue::Number(v)) = value {
-                            v as f64
-                        } else {
-                            default.as_f64().unwrap_or(0.0)
-                        },
-                        *min,
-                        *max,
-                    ))
-                } else {
-                    unreachable!()
-                }
-            }
-            ValueType::Int => {
-                if let ContentType::Int { min, max, .. } = typ {
-                    NodeEditorValueTypes::IntegerText(NodeNumericEditing::new(
-                        if let Some(NodeValue::Number(v)) = value {
-                            v as i64
-                        } else {
-                            default.as_i64().unwrap_or(0)
-                        },
-                        *min,
-                        *max,
-                    ))
-                } else if let ContentType::IntSlider { .. } = typ {
-                    NodeEditorValueTypes::Integer(if let Some(NodeValue::Number(v)) = value {
-                        v as i64
-                    } else {
-                        default.as_i64().unwrap_or(0)
-                    })
-                } else {
-                    unreachable!()
-                }
-            }
-            ValueType::Object => NodeEditorValueTypes::Other(serde_json::Value::Null),
-            ValueType::String => {
-                NodeEditorValueTypes::String(if let Some(NodeValue::String(v)) = value {
-                    v
-                } else {
-                    default
-                        .as_str()
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(String::new)
-                })
-            }
-            ValueType::List => NodeEditorValueTypes::Other(serde_json::Value::Null),
-            ValueType::Enum => NodeEditorValueTypes::Other(serde_json::Value::Null),
         })
     }
 }
