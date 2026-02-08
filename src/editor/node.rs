@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use derive_where::derive_where;
-use egui::emath::*;
 use egui::{Color32, Pos2, RichText, TextEdit, Ui};
 use serde_json::Value;
 

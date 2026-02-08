@@ -20,7 +20,7 @@ pub enum NodeEditorValueTypes {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(super) struct NodeNumericEditing<T>
+pub struct NodeNumericEditing<T>
 where
     T: FromStr + ToString + PartialOrd + Debug + Copy + Sized,
 {

@@ -4,7 +4,7 @@ use eframe::CreationContext;
 use egui::{CornerRadius, Frame, Id, Margin};
 use egui_snarl::{
     InPinId, NodeId, OutPinId, Snarl,
-    ui::{NodeLayout, PinPlacement, SnarlStyle, SnarlWidget},
+    ui::{NodeLayout, PinPlacement, SnarlStyle, SnarlWidget, get_selected_nodes},
 };
 use ouroboros::self_referencing;
 
@@ -84,6 +84,10 @@ impl eframe::App for HyNodeEditor {
             style.visuals.widgets.noninteractive.corner_radius = CornerRadius::ZERO;
             style.visuals.widgets.open.corner_radius = CornerRadius::ZERO;
             style.visuals.widgets.hovered.corner_radius = CornerRadius::ZERO;
+            style
+                .text_styles
+                .iter_mut()
+                .for_each(|text_style| text_style.1.size = 16.0);
         });
 
         let snarl_style = SnarlStyle {
@@ -93,7 +97,20 @@ impl eframe::App for HyNodeEditor {
             ..Default::default()
         };
 
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {});
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Save").clicked() {
+                        //functionality
+                    }
+                    if ui.button("Quit").clicked() {
+                        std::process::exit(0);
+                    }
+                });
+
+                ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+            });
+        });
 
         egui::CentralPanel::default()
             .frame(Frame {
@@ -114,5 +131,14 @@ impl eframe::App for HyNodeEditor {
                         );
                 })
             });
+
+        if ctx.input(|inp| inp.key_down(egui::Key::Delete)) {
+            let nodes = get_selected_nodes(Id::new("snarl-workspace"), ctx);
+            self.with_snarl_mut(|snarl| {
+                nodes.iter().for_each(|node| {
+                    snarl.remove_node(*node);
+                });
+            });
+        }
     }
 }

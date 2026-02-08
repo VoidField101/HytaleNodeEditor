@@ -36,7 +36,7 @@ pub struct Node {
     pub comment: Option<String>,
 
     #[serde(rename = "$NodeId")]
-    pub nodeId: Option<NodeId>,
+    pub node_id: Option<NodeId>,
 
     #[serde(flatten)]
     pub values: HashMap<String, NodeValue>,
@@ -196,7 +196,7 @@ impl Node {
         Ok(NormalizedNode {
             position: self.position,
             comment: self.comment,
-            node_id: self.nodeId,
+            node_id: self.node_id,
             variant: description.id.clone(),
             values: remaining,
             outputs: outputs,
